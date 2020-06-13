@@ -1,0 +1,20 @@
+[package]
+name = "esc_server"
+version = "0.1.0"
+authors = ["ryoha000 <ryoha@example.jp>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "^0.4.0"
+tql = { git = "https://github.com/antoyo/tql", default-features = false, features = ["chrono", "pg"] }
+tql_macros = { git = "https://github.com/antoyo/tql" }
+easy-scraper = "0.1.1"
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+actix-web = "2.0"
+actix-rt = "1.0"
+
+[dependencies.postgres]
+features = ["with-chrono"]
+version = "^0.15.1"
