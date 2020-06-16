@@ -12,6 +12,9 @@ use std::env;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 
+#[cfg(test)]
+pub mod tests;
+
 pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 pub fn get_db_url() -> String {
