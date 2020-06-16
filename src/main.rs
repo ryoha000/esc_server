@@ -11,7 +11,10 @@ use env_logger::Env;
 async fn main() -> std::io::Result<()> {
     let id = esc_server::login();
     let pass = esc_server::login1();
-    esc_server::actions::logics::es_login::es_login(&id, &pass).await;
+    let admin_header = esc_server::actions::logics::es_login::es_login(&id, &pass).await;
+    println!("{:?}", admin_header);
+    esc_server::actions::logics::scraping::get_all_games(admin_header).await;
+
     let db_url: String = esc_server::get_db_url();
     let manager = ConnectionManager::<PgConnection>::new(db_url);
     let pool = r2d2::Pool::builder()
