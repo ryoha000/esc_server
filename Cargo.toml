@@ -8,6 +8,9 @@ edition = "2018"
 
 [dependencies]
 easy-scraper = "0.1.1"
+html5ever = "*"
+scraper = "*"
+
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 actix-web = "2.0"
 actix-rt = "1.0"

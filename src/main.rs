@@ -9,7 +9,9 @@ use env_logger::Env;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    esc_server::actions::logics::es_login::es_login("ryoha", "kyoutuu0216");
+    let id = esc_server::login();
+    let pass = esc_server::login1();
+    esc_server::actions::logics::es_login::es_login(&id, &pass).await;
     let db_url: String = esc_server::get_db_url();
     let manager = ConnectionManager::<PgConnection>::new(db_url);
     let pool = r2d2::Pool::builder()
