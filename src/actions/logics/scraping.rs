@@ -2,7 +2,7 @@ use scraper::{Html, Selector};
 use super::super::super::models;
 extern crate reqwest;
 
-pub async fn get_all_games(header: reqwest::header::HeaderMap) {
+pub async fn get_all_games(header: reqwest::header::HeaderMap) -> models::Brand {
     let client = reqwest::Client::builder()
         .default_headers(header)
         .build()
@@ -26,7 +26,8 @@ pub async fn get_all_games(header: reqwest::header::HeaderMap) {
             _brands.push(_brand);
         }
     }
-    println!("{:#?}", _brands)
+    println!("{:#?}", _brands);
+    _brands.get(0).unwrap().clone()
 }
 
 fn get_brand_from_row(tr: scraper::element_ref::ElementRef) -> models::Brand {

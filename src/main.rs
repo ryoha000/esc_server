@@ -9,13 +9,6 @@ use env_logger::Env;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    let id = esc_server::login();
-    let pass = esc_server::login1();
-    let admin_header = esc_server::actions::logics::es_login::es_login(&id, &pass).await;
-    println!("{:?}", admin_header);
-    esc_server::actions::logics::scraping::get_all_games(admin_header).await;
-    // esc_server::actions::logics::scraping::get_all_games().await;
-
     let db_url: String = esc_server::get_db_url();
     let manager = ConnectionManager::<PgConnection>::new(db_url);
     let pool = r2d2::Pool::builder()
@@ -33,6 +26,9 @@ async fn main() -> std::io::Result<()> {
             .route("/users/{user_id}", web::get().to(api::users::get_user))
             .route("/users", web::get().to(api::users::get_users))
             .route("/users", web::post().to(api::users::signup))
+            .route("/brands", web::get().to(api::brands::get_brands))
+            .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))
+            .route("/brands", web::post().to(api::brands::add_brand))
             // .route("/again", web::get().to(index2))
     })
     .bind("127.0.0.1:8088")?
