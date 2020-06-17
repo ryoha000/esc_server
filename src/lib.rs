@@ -1,11 +1,12 @@
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
 pub mod api;
 pub mod schema;
 pub mod models;
 pub mod actions;
 
-#[macro_use]
-extern crate diesel;
-extern crate dotenv;
 
 use dotenv::dotenv;
 use std::env;

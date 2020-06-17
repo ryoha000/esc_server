@@ -1,7 +1,10 @@
 use serde::{Serialize};
 use chrono;
+use chrono::naive::NaiveDate;
 use crate::schema::users;
 use crate::schema::brands;
+use crate::schema::games;
+//use diesel::associations::{belongs_to};
 
 #[derive(Queryable)]
 pub struct Post {
@@ -38,7 +41,7 @@ pub struct Brand {
     pub notes: Option<String>,
     pub erogetrailers: Option<i32>,
     pub cien: Option<i32>,
-    pub scheduled_date: chrono::naive::NaiveDate,
+    pub scheduled_date: NaiveDate,
 }
 
 impl Brand {
@@ -61,7 +64,87 @@ impl Brand {
             notes: None,
             erogetrailers: None,
             cien: None,
-            scheduled_date: chrono::naive::NaiveDate::from_ymd(2030, 3, 31),
+            scheduled_date: NaiveDate::from_ymd(2030, 3, 31),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[belongs_to(Brand)]
+pub struct Game {
+    pub id: i32,
+    pub gamename: Option<String>,
+    pub furigana: Option<String>,
+    pub sellday: Option<NaiveDate>,
+    pub brand_id: i32,
+    // pub median: Option<i32>,
+    // pub stdev: Option<i32>,
+    // pub count2: Option<i32>,
+    pub comike: Option<i32>,
+    pub shoukai: Option<String>,
+    pub model: Option<String>,
+    pub erogame: Option<bool>,
+    pub banner_url: Option<String>,
+    pub gyutto_id: Option<i32>,
+    pub dmm: Option<String>,
+    pub dmm_genre: Option<String>,
+    pub dmm_genre_2: Option<String>,
+    pub erogametokuten: Option<i32>,
+    pub total_play_time_median: Option<i32>,
+    pub time_before_understanding_fun_median: Option<i32>,
+    pub dlsite_id: Option<String>,
+    pub dlsite_domain: Option<String>,
+    pub trial_url: Option<String>,
+    pub okazu: Option<bool>,
+    pub axis_of_soft_or_hard: Option<i32>,
+    pub genre: Option<String>,
+    pub twitter: Option<String>,
+    pub digiket: Option<String>,
+    pub twitter_data_widget_id: Option<i32>,
+    pub masterup: Option<NaiveDate>,
+    // pub masterup_tourokubi: Option<chrono::NaiveDateTime>,
+    pub steam: Option<i32>,
+    pub dlsite_rental: Option<bool>,
+    pub dmm_subsc: Option<String>,
+    pub surugaya_1: Option<i32>,
+    pub scheduled_date: NaiveDate,
+}
+
+impl Game {
+    pub fn new() -> Game {
+        Game {
+            id: 0,
+            gamename: None,
+            furigana: None,
+            sellday: None,
+            brand_id: 0,
+            comike: None,
+            shoukai: None,
+            model: None,
+            erogame: None,
+            banner_url: None,
+            gyutto_id: None,
+            dmm: None,
+            dmm_genre: None,
+            dmm_genre_2: None,
+            erogametokuten: None,
+            total_play_time_median: None,
+            time_before_understanding_fun_median: None,
+            dlsite_id: None,
+            dlsite_domain: None,
+            trial_url: None,
+            okazu: None,
+            axis_of_soft_or_hard: None,
+            genre: None,
+            twitter: None,
+            digiket: None,
+            twitter_data_widget_id: None,
+            masterup: None,
+            steam: None,
+            dlsite_rental: None,
+            dmm_subsc: None,
+            surugaya_1: None,
+            scheduled_date: NaiveDate::from_ymd(2030, 3, 31),
         }
     }
 }

@@ -22,6 +22,43 @@ table! {
 }
 
 table! {
+    games (id) {
+        id -> Int4,
+        gamename -> Nullable<Text>,
+        furigana -> Nullable<Text>,
+        sellday -> Nullable<Date>,
+        brand_id -> Int4,
+        comike -> Nullable<Int4>,
+        shoukai -> Nullable<Text>,
+        model -> Nullable<Text>,
+        erogame -> Nullable<Bool>,
+        banner_url -> Nullable<Text>,
+        gyutto_id -> Nullable<Int4>,
+        dmm -> Nullable<Text>,
+        dmm_genre -> Nullable<Text>,
+        dmm_genre_2 -> Nullable<Text>,
+        erogametokuten -> Nullable<Int4>,
+        total_play_time_median -> Nullable<Int4>,
+        time_before_understanding_fun_median -> Nullable<Int4>,
+        dlsite_id -> Nullable<Text>,
+        dlsite_domain -> Nullable<Text>,
+        trial_url -> Nullable<Text>,
+        okazu -> Nullable<Bool>,
+        axis_of_soft_or_hard -> Nullable<Int4>,
+        genre -> Nullable<Text>,
+        twitter -> Nullable<Text>,
+        digiket -> Nullable<Text>,
+        twitter_data_widget_id -> Nullable<Int4>,
+        masterup -> Nullable<Date>,
+        steam -> Nullable<Int4>,
+        dlsite_rental -> Nullable<Bool>,
+        dmm_subsc -> Nullable<Text>,
+        surugaya_1 -> Nullable<Int4>,
+        scheduled_date -> Date,
+    }
+}
+
+table! {
     users (id) {
         id -> Varchar,
         name -> Varchar,
@@ -30,7 +67,10 @@ table! {
     }
 }
 
+joinable!(games -> brands (brand_id));
+
 allow_tables_to_appear_in_same_query!(
     brands,
+    games,
     users,
 );
