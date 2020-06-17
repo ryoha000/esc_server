@@ -29,6 +29,10 @@ async fn main() -> std::io::Result<()> {
             .route("/brands", web::get().to(api::brands::get_brands))
             .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))
             .route("/brands", web::post().to(api::brands::add_brand))
+            
+            .route("/games", web::get().to(api::games::get_games))
+            .route("/games/{game_id}", web::get().to(api::games::get_game))
+            .route("/games", web::post().to(api::games::add_game))
             // .route("/again", web::get().to(index2))
     })
     .bind("127.0.0.1:8088")?
