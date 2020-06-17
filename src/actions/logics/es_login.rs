@@ -65,20 +65,3 @@ async fn get_token() -> HiddenForm {
 
     HiddenForm { cookie: res_cookie, token: String::from("") }
 }
-
-// "set-cookie":
-// "PHPSESSID=4p0g2i65bmgc7t2lrr88prk38do0u45tag64h7tku8701epel4t2e5f9bisaokn9ldi1v9m6b0o2b6echh3033nook4gc5g9pham2augsp3rnqbc5v07as6glnd1lj5g;
-// expires=Tue, 23-Jun-2020 09:08:31 GMT;
-// Max-Age=604800;
-// path=/; HttpOnly;
-// SameSite=Lax",
-
-// "set-cookie":
-// "CONTENTS_VISIT=1;
-// expires=Thu, 16-Jul-2020 09:08:31 GMT;
-// Max-Age=2592000",
-
-// "set-cookie":
-// "user_id=ryoha;
-// expires=Thu, 16-Jul-2020 09:08:31 GMT;
-// Max-Age=2592000"

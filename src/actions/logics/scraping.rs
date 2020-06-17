@@ -1,93 +1,14 @@
-use easy_scraper::Pattern;
+use scraper::{Html, Selector};
+use super::super::super::models;
 extern crate reqwest;
 
 pub async fn get_all_games(header: reqwest::header::HeaderMap) {
-    println!("{:?}", header);
-    let pat = Pattern::new(
-        r#"
-<tr>
-    <th>{{id}}</th>
-    <th>{{gamename}}</th>
-    <th>{{furigana}}</th>
-    <th>{{sellday}}</th>
-    <th>{{brandname}}</th>
-    <th>{{median}}</th>
-    <th>{{stdev}}</th>
-    <th>{{creater}}</th>
-    <th>{{kansouurl}}</th>
-    <th>{{checked}}</th>
-    <th>{{hanbaisuu}}</th>
-    <th>{{average2}}</th>
-    <th>{{median2}}</th>
-    <th>{{count2}}</th>
-    <th>{{comike}}</th>
-    <th>{{shoukai}}</th>
-    <th>{{model}}</th>
-    <th>{{checked2}}</th>
-    <th>{{erogame}}</th>
-    <th>{{galge}}</th>
-    <th>{{elfics}}</th>
-    <th>{{banner_url}}</th>
-    <th>{{admin_checked}}</th>
-    <th>{{max2}}</th>
-    <th>{{min2}}</th>
-    <th>{{gyutto_enc}}</th>
-    <th>{{gyutto_id}}</th>
-    <th>{{dmm}}</th>
-    <th>{{dmm_genre}}</th>
-    <th>{{dmm_genre_2}}</th>
-    <th>{{erogametokuten}}</th>
-    <th>{{total_play_time_median}}</th>
-    <th>{{time_before_understanding_fun_median}}</th>
-    <th>{{dlsite_id}}</th>
-    <th>{{dlsite_domain}}</th>
-    <th>{{the_number_of_uid_which_input_pov}}</th>
-    <th>{{the_number_of_uid_which_input_play}}</th>
-    <th>{{total_pov_enrollment_of_a}}</th>
-    <th>{{total_pov_enrollment_of_b}}</th>
-    <th>{{total_pov_enrollment_of_c}}</th>
-    <th>{{trial_url}}</th>
-    <th>{{trial_h}}</th>
-    <th>{{http_response_code}}</th>
-    <th>{{okazu}}</th>
-    <th>{{axis_of_soft_or_hard}}</th>
-    <th>{{trial_url_update_time}}</th>
-    <th>{{genre}}</th>
-    <th>{{twitter}}</th>
-    <th>{{erogetrailers}}</th>
-    <th>{{tourokubi}}</th>
-    <th>{{digiket}}</th>
-    <th>{{dmm_sample_image_count}}</th>
-    <th>{{dlsite_sample_image_count}}</th>
-    <th>{{gyutto_sample_image_count}}</th>
-    <th>{{digiket_sample_image_count}}</th>
-    <th>{{twitter_search}}</th>
-    <th>{{tgfrontier}}</th>
-    <th>{{gamemeter}}</th>
-    <th>{{twitter_data_widget_id}}</th>
-    <th>{{twitter_data_widget_id_before}}</th>
-    <th>{{twitter_data_widget_id_official}}</th>
-    <th>{{masterup}}</th>
-    <th>{{masterup_tourokubi}}</th>
-    <th>{{steam}}</th>
-    <th>{{dlsite_rental}}</th>
-    <th>{{dmm_subsc}}</th>
-    <th>{{surugaya_1}}</th>
-    <th>{{surugaya_2}}</th>
-    <th>{{surugaya_1_back_image}}</th>
-    <th>{{surugaya_2_back_image}}</th>
-    <th>{{count_all}}</th>
-</tr>
-"#,
-    )
-    .unwrap();
-
     let client = reqwest::Client::builder()
         .default_headers(header)
         .build()
         .unwrap();
 
-    let res = client.get("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/usersql_exec.php?sql_id=2726")
+    let res = client.get("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/usersql_exec.php?sql_id=2727")
         .send()
         .await
         .unwrap()
@@ -95,6 +16,63 @@ pub async fn get_all_games(header: reqwest::header::HeaderMap) {
         .await
         .unwrap();
 
-    let ms = pat.matches(&res);
-    println!("{:#?}", ms);
+    let fragment = Html::parse_fragment(&res);
+    let tr_selector = Selector::parse("tr").unwrap();
+    
+    let mut _brands: Vec<models::Brand> = Vec::new();
+    for tr in fragment.select(&tr_selector) {
+        let mut _brand = get_brand_from_row(tr);
+        if _brand.id != 0 {
+            _brands.push(_brand);
+        }
+    }
+    println!("{:#?}", _brands)
+}
+
+fn get_brand_from_row(tr: scraper::element_ref::ElementRef) -> models::Brand {
+    let mut _brand = models::Brand::new();
+    let td_selector = Selector::parse("td").unwrap();
+
+    for (i, td) in tr.select(&td_selector).enumerate() {
+        println!("{:?}", td.inner_html());
+        match i as u32 {
+            0 => _brand.id = match td.inner_html().parse() {
+                Ok(b) => b,
+                _ => 0
+            },
+            1 => _brand.brandname = td.inner_html(),
+            2 => _brand.brandfurigana = Some(td.inner_html()),
+            3 => _brand.makername = Some(td.inner_html()),
+            4 => _brand.makerfurigana = Some(td.inner_html()),
+            5 => _brand.url = Some(td.inner_html()),
+            6 => _brand.checked = option_bool_from_tf(td.inner_html()),
+            7 => _brand.kind = Some(td.inner_html()),
+            8 => _brand.lost = option_bool_from_tf(td.inner_html()),
+            9 => _brand.directlink = option_bool_from_tf(td.inner_html()),
+            10 => _brand.median = option_i32_from_string(td.inner_html()),
+            11 => _brand.http_response_code = option_i32_from_string(td.inner_html()),
+            12 => _brand.twitter = Some(td.inner_html()),
+            13 => _brand.twitter_data_widget_id = option_i32_from_string(td.inner_html()),
+            14 => _brand.notes = Some(td.inner_html()),
+            15 => _brand.erogetrailers = option_i32_from_string(td.inner_html()),
+            16 => _brand.cien = option_i32_from_string(td.inner_html()),
+            _ => {}
+        }
+    }
+    _brand
+}
+
+fn option_bool_from_tf(b: String) -> Option<bool> {
+    match &*b {
+        "t" => Some(true),
+        "f" => Some(false),
+        _ => None
+    }
+}
+
+fn option_i32_from_string(b: String) -> Option<i32> {
+    match b.parse() {
+        Ok(b) => Some(b),
+        _ => None
+    }
 }
