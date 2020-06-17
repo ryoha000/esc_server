@@ -1,4 +1,5 @@
 use serde::{Serialize};
+use chrono;
 use crate::schema::users;
 use crate::schema::brands;
 
@@ -37,6 +38,7 @@ pub struct Brand {
     pub notes: Option<String>,
     pub erogetrailers: Option<i32>,
     pub cien: Option<i32>,
+    pub scheduled_date: chrono::naive::NaiveDate,
 }
 
 impl Brand {
@@ -59,6 +61,7 @@ impl Brand {
             notes: None,
             erogetrailers: None,
             cien: None,
+            scheduled_date: chrono::naive::NaiveDate::from_ymd(2030, 3, 31),
         }
     }
 }

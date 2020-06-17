@@ -1,6 +1,7 @@
 use scraper::{Html, Selector};
 use super::super::super::models;
 extern crate reqwest;
+use rand::Rng;
 
 pub async fn get_all_games(header: reqwest::header::HeaderMap) -> models::Brand {
     let client = reqwest::Client::builder()
@@ -60,6 +61,10 @@ fn get_brand_from_row(tr: scraper::element_ref::ElementRef) -> models::Brand {
             _ => {}
         }
     }
+    let today = chrono::Local::today();
+    let mut rng = rand::thread_rng();
+    let add_date: i64 = rng.gen_range(7, 14);
+    _brand.scheduled_date = today.checked_add_signed(chrono::Duration::days(add_date)).unwrap().naive_local();
     _brand
 }
 

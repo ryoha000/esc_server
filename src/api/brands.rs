@@ -1,5 +1,4 @@
 use actix_web::{web, Error, HttpResponse};
-use serde::{Deserialize, Serialize};
 use super::super::actions::brands;
 
 pub async fn get_brand(

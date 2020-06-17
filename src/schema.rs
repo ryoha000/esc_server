@@ -17,6 +17,7 @@ table! {
         notes -> Nullable<Text>,
         erogetrailers -> Nullable<Int4>,
         cien -> Nullable<Int4>,
+        scheduled_date -> Date,
     }
 }
 
