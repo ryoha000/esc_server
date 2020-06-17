@@ -31,6 +31,34 @@ pub async fn get_all_games(header: reqwest::header::HeaderMap) -> models::Brand 
     _brands.get(0).unwrap().clone()
 }
 
+pub async fn get_test_game(header: reqwest::header::HeaderMap) -> models::Game {
+    let client = reqwest::Client::builder()
+        .default_headers(header)
+        .build()
+        .unwrap();
+
+    let res = client.get("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/usersql_exec.php?sql_id=2726")
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    let fragment = Html::parse_fragment(&res);
+    let tr_selector = Selector::parse("tr").unwrap();
+    
+    let mut _games: Vec<models::Game> = Vec::new();
+    for tr in fragment.select(&tr_selector) {
+        let mut _game = models::Game::get_game_from_row(tr);
+        if _game.id != 0 {
+            _games.push(_game);
+        }
+    }
+    println!("{:#?}", _games);
+    _games.get(0).unwrap().clone()
+}
+
 impl models::Brand {
     fn get_brand_from_row(tr: scraper::element_ref::ElementRef) -> models::Brand {
         let mut _brand = models::Brand::new();
@@ -78,40 +106,43 @@ impl models::Game {
         for (i, td) in tr.select(&td_selector).enumerate() {
             println!("{:?}", td.inner_html());
             match i as u32 {
-                1 => _game.id = match td.inner_html().parse() {
+                0 => _game.id = match td.inner_html().parse() {
                     Ok(b) => b,
                     _ => 0
                 },
                 1 => _game.gamename = Some(td.inner_html()),
-                1 => _game.furigana = Some(td.inner_html()),
-                1 => _game.sellday = Some(td.inner_html()),
-                1 => _game.brand_id = option_i32_from_string(td.inner_html()),
-                1 => _game.comike = Some(td.inner_html()),
-                1 => _game.shoukai = Some(td.inner_html()),
-                1 => _game.model = Some(td.inner_html()),
-                1 => _game.erogame = Some(td.inner_html()),
-                1 => _game.banner_url = Some(td.inner_html()),
-                1 => _game.gyutto_id = Some(td.inner_html()),
-                1 => _game.dmm = Some(td.inner_html()),
-                1 => _game.dmm_genre = Some(td.inner_html()),
-                1 => _game.dmm_genre_2 = Some(td.inner_html()),
-                1 => _game.erogametokuten = Some(td.inner_html()),
-                1 => _game.total_play_time_median = Some(td.inner_html()),
-                1 => _game.time_before_understanding_fun_median = Some(td.inner_html()),
-                1 => _game.dlsite_id = Some(td.inner_html()),
-                1 => _game.dlsite_domain = Some(td.inner_html()),
-                1 => _game.trial_url = Some(td.inner_html()),
-                1 => _game.okazu = Some(td.inner_html()),
-                1 => _game.axis_of_soft_or_hard = Some(td.inner_html()),
-                1 => _game.genre = Some(td.inner_html()),
-                1 => _game.twitter = Some(td.inner_html()),
-                1 => _game.digiket = Some(td.inner_html()),
-                1 => _game.twitter_data_widget_id = Some(td.inner_html()),
-                1 => _game.masterup = Some(td.inner_html()),
-                1 => _game.steam = Some(td.inner_html()),
-                1 => _game.dlsite_rental = Some(td.inner_html()),
-                1 => _game.dmm_subsc = Some(td.inner_html()),
-                1 => _game.surugaya_1 = Some(td.inner_html()),
+                2 => _game.furigana = Some(td.inner_html()),
+                3 => _game.sellday = option_date_from_string(td.inner_html()),
+                4 => _game.brand_id = match td.inner_html().parse() {
+                    Ok(b) => b,
+                    _ => 0
+                },
+                14 => _game.comike = option_i32_from_string(td.inner_html()),
+                15 => _game.shoukai = Some(td.inner_html()),
+                16 => _game.model = Some(td.inner_html()),
+                18 => _game.erogame = option_bool_from_tf(td.inner_html()),
+                21 => _game.banner_url = Some(td.inner_html()),
+                26 => _game.gyutto_id = option_i32_from_string(td.inner_html()),
+                27 => _game.dmm = Some(td.inner_html()),
+                28 => _game.dmm_genre = Some(td.inner_html()),
+                29 => _game.dmm_genre_2 = Some(td.inner_html()),
+                30 => _game.erogametokuten = option_i32_from_string(td.inner_html()),
+                31 => _game.total_play_time_median = option_i32_from_string(td.inner_html()),
+                32 => _game.time_before_understanding_fun_median = option_i32_from_string(td.inner_html()),
+                33 => _game.dlsite_id = Some(td.inner_html()),
+                34 => _game.dlsite_domain = Some(td.inner_html()),
+                40 => _game.trial_url = Some(td.inner_html()),
+                43 => _game.okazu = option_bool_from_tf(td.inner_html()),
+                44 => _game.axis_of_soft_or_hard = option_i32_from_string(td.inner_html()),
+                46 => _game.genre = Some(td.inner_html()),
+                47 => _game.twitter = Some(td.inner_html()),
+                50 => _game.digiket = Some(td.inner_html()),
+                58 => _game.twitter_data_widget_id = option_i32_from_string(td.inner_html()),
+                61 => _game.masterup = option_date_from_string(td.inner_html()),
+                63 => _game.steam = option_i32_from_string(td.inner_html()),
+                64 => _game.dlsite_rental = option_bool_from_tf(td.inner_html()),
+                65 => _game.dmm_subsc = Some(td.inner_html()),
+                66 => _game.surugaya_1 = option_i32_from_string(td.inner_html()),
                 _ => {}
             }
         }
@@ -138,7 +169,7 @@ fn option_i32_from_string(b: String) -> Option<i32> {
     }
 }
 
-fn option_i32_from_string(b: String) -> Option<i32> {
+fn option_date_from_string(b: String) -> Option<chrono::NaiveDate> {
     match b.parse() {
         Ok(b) => Some(b),
         _ => None
