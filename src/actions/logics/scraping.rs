@@ -137,3 +137,10 @@ fn option_i32_from_string(b: String) -> Option<i32> {
         _ => None
     }
 }
+
+fn option_i32_from_string(b: String) -> Option<i32> {
+    match b.parse() {
+        Ok(b) => Some(b),
+        _ => None
+    }
+}
