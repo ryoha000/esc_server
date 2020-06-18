@@ -39,13 +39,6 @@ pub fn insert_new_brand(
     // to prevent import collisions and namespace pollution.
     use crate::schema::brands::dsl::*;
 
-    // let new_brand = models::Brand {
-    //     id: Uuid::new_v4().to_string(),
-    //     name: nm.to_owned(),
-    //     display_name: display_nm.to_owned(),
-    //     password: pass.to_owned()
-    // };
-
     diesel::insert_into(brands).values(&new_brand).execute(conn)?;
 
     Ok(new_brand)
@@ -60,13 +53,6 @@ pub fn insert_new_brands(
     // modules inside a function's scope (rather than the normal module's scope)
     // to prevent import collisions and namespace pollution.
     use crate::schema::brands::dsl::*;
-
-    // let new_brand = models::Brand {
-    //     id: Uuid::new_v4().to_string(),
-    //     name: nm.to_owned(),
-    //     display_name: display_nm.to_owned(),
-    //     password: pass.to_owned()
-    // };
 
     diesel::insert_into(brands).values(&new_brands).execute(conn)?;
 

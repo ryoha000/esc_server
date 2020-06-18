@@ -44,11 +44,38 @@ pub async fn get_brands(
 pub async fn add_brand(
     pool: web::Data<super::super::DbPool>
 ) -> Result<HttpResponse, Error> {
-    let id = super::super::login();
-    let pass = super::super::login1();
-    let admin_header = super::super::actions::logics::es_login::es_login(&id, &pass).await;
-    println!("{:?}", admin_header);
-    let new_brand = super::super::actions::logics::scraping::get_all_games(admin_header).await;
+    let new_brands = super::super::actions::logics::scraping::brands::get_all_brands()
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    println!("{:?}", new_brands.len());
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    // println!("{}", &form.)
+
+    // use web::block to offload blocking Diesel code without blocking server thread
+    let brands = web::block(move || brands::insert_new_brands(new_brands, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(brands))
+}
+
+pub async fn add_id_brand(
+    pool: web::Data<super::super::DbPool>,
+    brand_id: web::Path<i32>,
+) -> Result<HttpResponse, Error> {
+    let new_brand = super::super::actions::logics::scraping::brands::get_latest_brand_by_id(brand_id.into_inner())
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
 
     let conn = pool.get().expect("couldn't get db connection from pool");
     // println!("{}", &form.)

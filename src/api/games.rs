@@ -42,13 +42,38 @@ pub async fn get_games(
 }
 
 pub async fn add_game(
-    pool: web::Data<super::super::DbPool>
+    pool: web::Data<super::super::DbPool>,
 ) -> Result<HttpResponse, Error> {
     let id = super::super::login();
     let pass = super::super::login1();
     let admin_header = super::super::actions::logics::es_login::es_login(&id, &pass).await;
     println!("{:?}", admin_header);
-    let new_game = super::super::actions::logics::scraping::get_test_game(admin_header).await;
+    let new_game = super::super::actions::logics::scraping::games::get_test_game(admin_header).await;
+
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    // println!("{}", &form.)
+
+    // use web::block to offload blocking Diesel code without blocking server thread
+    let game = web::block(move || games::insert_new_game(new_game, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(game))
+}
+
+pub async fn add_id_game(
+    pool: web::Data<super::super::DbPool>,
+    game_id: web::Path<i32>,
+) -> Result<HttpResponse, Error> {
+    let new_game = super::super::actions::logics::scraping::games::get_latest_game_by_id(game_id.into_inner())
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
 
     let conn = pool.get().expect("couldn't get db connection from pool");
     // println!("{}", &form.)
