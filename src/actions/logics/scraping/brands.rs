@@ -5,26 +5,6 @@ use rand::Rng;
 use super::scraping_shared::*;
 use anyhow::{Context, Result};
 
-pub async fn get_all_games(header: reqwest::header::HeaderMap) -> Result<models::Brand> {
-    let material = ClientMaterial {
-        url: "https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/usersql_exec.php?sql_id=2727",
-        header: Some(header),
-        form: None
-    };
-    let text = setup_get_client(material).await?;
-
-    let fragment = Html::parse_fragment(&text);
-    let tr_selector = Selector::parse("tr").unwrap();
-    let mut _brands: Vec<models::Brand> = Vec::new();
-    for tr in fragment.select(&tr_selector) {
-        let mut _brand = models::Brand::get_brand_from_row(tr);
-        if _brand.id != 0 {
-            _brands.push(_brand);
-        }
-    }
-    Ok(_brands.get(0).unwrap().clone())
-}
-
 pub async fn get_all_brands() -> Result<Vec<models::Brand>> {
     println!("{}", make_query(1));
     let fragment = execute_on_es(make_query(0)).await.unwrap();

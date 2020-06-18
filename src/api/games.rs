@@ -44,24 +44,25 @@ pub async fn get_games(
 pub async fn add_game(
     pool: web::Data<super::super::DbPool>,
 ) -> Result<HttpResponse, Error> {
-    let id = super::super::login();
-    let pass = super::super::login1();
-    let admin_header = super::super::actions::logics::es_login::es_login(&id, &pass).await;
-    println!("{:?}", admin_header);
-    let new_game = super::super::actions::logics::scraping::games::get_test_game(admin_header).await;
-
-    let conn = pool.get().expect("couldn't get db connection from pool");
-    // println!("{}", &form.)
-
-    // use web::block to offload blocking Diesel code without blocking server thread
-    let game = web::block(move || games::insert_new_game(new_game, &conn))
+    let new_games = super::super::actions::logics::scraping::games::get_all_games()
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
 
-    Ok(HttpResponse::Ok().json(game))
+    let conn = pool.get().expect("couldn't get db connection from pool");
+    // println!("{}", &form.)
+
+    // use web::block to offload blocking Diesel code without blocking server thread
+    let games = web::block(move || games::insert_new_games(new_games, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(games))
 }
 
 pub async fn add_id_game(
