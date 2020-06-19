@@ -171,6 +171,9 @@ impl Game {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[belongs_to(User)]
+#[belongs_to(Game)]
 pub struct Timeline {
     pub id: String,
     pub user_id: String,
