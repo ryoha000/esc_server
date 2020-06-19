@@ -1,4 +1,4 @@
-use scraper::{Html, Selector};
+use scraper::{Selector};
 use super::super::super::super::models;
 extern crate reqwest;
 use rand::Rng;
