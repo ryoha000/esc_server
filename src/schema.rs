@@ -59,6 +59,16 @@ table! {
 }
 
 table! {
+    timelines (id) {
+        id -> Varchar,
+        user_id -> Varchar,
+        game_id -> Int4,
+        log_type -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     users (id) {
         id -> Varchar,
         es_user_id -> Varchar,
@@ -73,9 +83,12 @@ table! {
 }
 
 joinable!(games -> brands (brand_id));
+joinable!(timelines -> games (game_id));
+joinable!(timelines -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     brands,
     games,
+    timelines,
     users,
 );

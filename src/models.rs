@@ -4,6 +4,7 @@ use chrono::naive::NaiveDate;
 use crate::schema::users;
 use crate::schema::brands;
 use crate::schema::games;
+use crate::schema::timelines;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -40,7 +41,6 @@ impl User {
             show_followers_okazu: Some(false),
             twitter_id: None,
         }
-        
     }
 }
 
@@ -167,6 +167,26 @@ impl Game {
             dmm_subsc: None,
             surugaya_1: None,
             scheduled_date: NaiveDate::from_ymd(2030, 3, 31),
+        }
+    }
+}
+
+pub struct Timeline {
+    pub id: String,
+    pub user_id: String,
+    pub game_id: i32,
+    pub log_type: i32, // Play => 0, Review => 1, List = 2
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl Timeline {
+    pub fn new(user_id: String, game_id: i32, log_type: i32) -> Timeline {
+        Timeline {
+            id: Uuid::new_v4().to_string(),
+            user_id: user_id,
+            game_id: game_id,
+            log_type: log_type,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0)
         }
     }
 }

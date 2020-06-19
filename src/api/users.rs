@@ -78,39 +78,39 @@ pub async fn signup(
     let mut res = HttpResponse::new(http::StatusCode::OK);
     // Login処理
     if let Ok(cookie) = es_login::es_login(&form.name, &form.password)
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            res = HttpResponse::NotFound()
+                .body(format!("{:?}", e));
+        }) {
+            let mut new_user = models::User::new();
+            new_user.es_user_id = form.name.clone();
+            new_user.display_name = form.display_name.clone();
+            let user = web::block(move || users::insert_new_user(new_user, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
-                res = HttpResponse::NotFound()
-                    .body(format!("No user found"));
-            }) {
-                let mut new_user = models::User::new();
-                new_user.es_user_id = form.name.clone();
-                new_user.display_name = form.display_name.clone();
-                let user = web::block(move || users::insert_new_user(new_user, &conn))
-                .await
-                .map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
-                
-                
-                let session_id = uuid::Uuid::new_v4().to_string();
-                let mut redis_conn = pools.redis.get().map_err(|_| {
-                    eprintln!("couldn't get db connection from pools");
-                    HttpResponse::InternalServerError().finish()
-                })?;
-                
-                // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
-                r2d2_redis::redis::pipe()
-                .cmd("SET").arg(&format!("session_id:{}", session_id)).arg(cookie.to_str().unwrap())
-                .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
-                .query(redis_conn.deref_mut()).map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
-                res = HttpResponse::Ok().json(user);
-            }
+                HttpResponse::InternalServerError().finish()
+            })?;
+            
+            
+            let session_id = uuid::Uuid::new_v4().to_string();
+            let mut redis_conn = pools.redis.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+            
+            // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
+            r2d2_redis::redis::pipe()
+            .cmd("SET").arg(&format!("session_id:{}", session_id)).arg(cookie.to_str().unwrap())
+            .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
+            .query(redis_conn.deref_mut()).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            res = HttpResponse::Ok().json(user);
+        }
 
     Ok(res)
 }
