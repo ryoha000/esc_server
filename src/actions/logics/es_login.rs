@@ -1,5 +1,6 @@
-extern crate reqwest;
+//extern crate reqwest;
 use reqwest::header;
+use anyhow::{Context, Result};
 
 #[derive(Debug)]
 struct HiddenForm {
@@ -7,8 +8,8 @@ struct HiddenForm {
     token: String,
 }
 
-pub async fn es_login(user_id: &str, password: &str) -> header::HeaderMap {
-    let hidden_form = get_token().await;
+pub async fn es_login(user_id: &str, password: &str) -> Result<header::HeaderValue> {
+    let hidden_form = get_token().await?;
     let params = [("fLoginID", user_id), ("fPassword", password), ("_token", &hidden_form.token), ("sorce_url", "/~ap2/ero/toukei_kaiseki/")];
 
     let mut headers = header::HeaderMap::new();
@@ -17,38 +18,42 @@ pub async fn es_login(user_id: &str, password: &str) -> header::HeaderMap {
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .build()
-        .unwrap();
+        .with_context(|| "failed to create client")?;
 
     let res = client.post("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/loginExe_ver2.php")
         .form(&params)
         .send()
         .await
-        .unwrap();
+        .with_context(|| "ErogameScape is not respond")?;
 
-    let mut header_with_cookie = header::HeaderMap::new();
     let _cookie = res.headers().get_all("set-cookie").iter();
+
+    if _cookie.size_hint().0 < 3 {
+        anyhow::bail!("user_id or password is invalid")
+    }
+
     let mut concat_cookie = String::new();
     for c in _cookie {
         println!("{:?}", c);
         let split_cookie: Vec<&str> = c.to_str().unwrap().split(";").collect();
-        concat_cookie += split_cookie.get(0).unwrap();
+        concat_cookie += split_cookie.get(0).with_context(|| "Can not get cookie")?;
         concat_cookie += "; ";
     }
-    header_with_cookie.insert("cookie", header::HeaderValue::from_str(&concat_cookie).unwrap());
-    println!("{:?}", header_with_cookie);
-    header_with_cookie
+    println!("{:?}", concat_cookie);
+    Ok(header::HeaderValue::from_str(&concat_cookie).unwrap())
 }
 
 use scraper::{Html, Selector};
 
-async fn get_token() -> HiddenForm {
+async fn get_token() -> Result<HiddenForm> {
     let res = reqwest::get("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/login.php")
-        .await
-        .unwrap();
+        .await?;
 
-    let res_cookie = res.headers().get("set-cookie").unwrap().clone();
+    let res_cookie = res.headers().get("set-cookie").with_context(|| "ErogameScape is not respond")?;
 
-    let res_text = res.text().await.unwrap();
+    let cookie = res_cookie.clone();
+
+    let res_text = res.text().await.with_context(|| "ErogameScape is not respond")?;
     let fragment = Html::parse_fragment(&res_text);
     let input_selector = Selector::parse("input").unwrap();
     let input = fragment.select(&input_selector);
@@ -57,11 +62,10 @@ async fn get_token() -> HiddenForm {
         if let Some(name) = element.value().attr("name") {
             if name == "_token" {
                 if let Some(value) = element.value().attr("value") {
-                    return HiddenForm { cookie: res_cookie, token: value.to_string() }
+                    return Ok(HiddenForm { cookie: cookie, token: value.to_string() })
                 }
             }
         }
     }
-
-    HiddenForm { cookie: res_cookie, token: String::from("") }
+    anyhow::bail!("Erogame Scape design is chenged")
 }

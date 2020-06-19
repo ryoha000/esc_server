@@ -5,7 +5,7 @@ use rand::Rng;
 use super::scraping_shared::*;
 use anyhow::{Context, Result};
 
-const INVALID_GAME_IDs: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
+const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
 
 pub async fn get_all_games() -> Result<Vec<models::Game>> {
     let fragment = execute_on_es(make_query(0)).await.unwrap();
@@ -106,7 +106,7 @@ fn check_game(_game: &models::Game) -> bool {
     if _game.id != 0 || _game.brand_id != 0 {
         is_ok = false;
     }
-    for inv_id in INVALID_GAME_IDs.iter() {
+    for inv_id in INVALID_GAME_ID.iter() {
         if &_game.id == inv_id {
             is_ok = false;
         }

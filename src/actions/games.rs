@@ -53,33 +53,43 @@ pub fn insert_new_games(
     // to prevent import collisions and namespace pollution.
     use crate::schema::games::dsl::*;
 
-    // const BATCH_SIZE: i32 = 2000;
-    // let len = new_games.len();
-    // println!("{}", len);
-    // let number_of_batch = len as i32 / BATCH_SIZE;
-    // println!("{}", number_of_batch);
-    // let mut split_games_vec: Vec<Vec<models::Game>> = Vec::new();
-    // for i in 0..(number_of_batch + 1) {
-    //     let mut split_games: Vec<models::Game> = Vec::new();
-    //     for j in 0..BATCH_SIZE {
-    //         match new_games.get((i * BATCH_SIZE + j) as usize) {
-    //             Some(g) => split_games.push(g.clone()),
-    //             _ => {}
-    //         }
-    //     }
-    //     split_games_vec.push(split_games);
-    // }
+    const BATCH_SIZE: i32 = 2000;
+    let len = new_games.len();
+    println!("{}", len);
+    let number_of_batch = len as i32 / BATCH_SIZE;
+    println!("{}", number_of_batch);
+    let mut split_games_vec: Vec<Vec<models::Game>> = Vec::new();
+    for i in 0..(number_of_batch + 1) {
+        let mut split_games: Vec<models::Game> = Vec::new();
+        for j in 0..BATCH_SIZE {
+            match new_games.get((i * BATCH_SIZE + j) as usize) {
+                Some(g) => split_games.push(g.clone()),
+                _ => {}
+            }
+        }
+        split_games_vec.push(split_games);
+    }
 
-    let a = new_games.clone();
-    for new_game in new_games {
-        match diesel::insert_into(games).values(&new_game).execute(conn) {
+    for sg in split_games_vec {
+        match diesel::insert_into(games).values(&sg).execute(conn) {
             Ok(_) => {},
             e => {
                 eprintln!("{:?}", e);
-                eprintln!("{:?}", new_game);
+                eprintln!("{:?}", sg);
             }
         };
     }
 
-    Ok(a)
+    // let a = new_games.clone();
+    // for new_game in new_games {
+    //     match diesel::insert_into(games).values(&new_game).execute(conn) {
+    //         Ok(_) => {},
+    //         e => {
+    //             eprintln!("{:?}", e);
+    //             eprintln!("{:?}", new_game);
+    //         }
+    //     };
+    // }
+
+    Ok(new_games)
 }

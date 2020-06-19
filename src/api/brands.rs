@@ -2,10 +2,13 @@ use actix_web::{web, Error, HttpResponse};
 use super::super::actions::brands;
 
 pub async fn get_brand(
-    pool: web::Data<super::super::DbPool>,
+    pools: web::Data<super::super::Pools>,
     brand_id: web::Path<i32>,
 ) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
     let brand_id = brand_id.into_inner();
 
     // use web::block to offload blocking Diesel code without blocking server thread
@@ -26,9 +29,12 @@ pub async fn get_brand(
 }
 
 pub async fn get_brands(
-    pool: web::Data<super::super::DbPool>
+    pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
 
     // use web::block to offload blocking Diesel code without blocking server thread
     let brand = web::block(move || brands::find_brands(&conn))
@@ -42,7 +48,7 @@ pub async fn get_brands(
 }
 
 pub async fn add_brand(
-    pool: web::Data<super::super::DbPool>
+    pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
     let new_brands = super::super::actions::logics::scraping::brands::get_all_brands()
         .await
@@ -52,7 +58,10 @@ pub async fn add_brand(
         })?;
 
     println!("{:?}", new_brands.len());
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
     // println!("{}", &form.)
 
     // use web::block to offload blocking Diesel code without blocking server thread
@@ -67,7 +76,7 @@ pub async fn add_brand(
 }
 
 pub async fn add_id_brand(
-    pool: web::Data<super::super::DbPool>,
+    pools: web::Data<super::super::Pools>,
     brand_id: web::Path<i32>,
 ) -> Result<HttpResponse, Error> {
     let new_brand = super::super::actions::logics::scraping::brands::get_latest_brand_by_id(brand_id.into_inner())
@@ -77,7 +86,10 @@ pub async fn add_id_brand(
             HttpResponse::InternalServerError().finish()
         })?;
 
-    let conn = pool.get().expect("couldn't get db connection from pool");
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from poolss");
+        HttpResponse::InternalServerError().finish()
+    })?;
     // println!("{}", &form.)
 
     // use web::block to offload blocking Diesel code without blocking server thread
