@@ -17,11 +17,24 @@ use diesel::r2d2::{self, ConnectionManager};
 pub mod tests;
 
 pub type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+pub type RedisPool = r2d2_redis::r2d2::Pool<r2d2_redis::RedisConnectionManager>;
+
+#[derive(Clone)]
+pub struct Pools {
+    pub db: DbPool,
+    pub redis: RedisPool,
+}
 
 pub fn get_db_url() -> String {
     dotenv().ok();
 
     env::var("DATABASE_URL").expect("DATABASE_URL must be set")
+}
+
+pub fn get_redis_url() -> String {
+    dotenv().ok();
+
+    env::var("REDIS_URL").expect("REDIS_URL must be set")
 }
 
 pub fn login() -> String {
