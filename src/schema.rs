@@ -61,9 +61,14 @@ table! {
 table! {
     users (id) {
         id -> Varchar,
-        name -> Varchar,
+        es_user_id -> Varchar,
         display_name -> Varchar,
-        password -> Varchar,
+        comment -> Nullable<Text>,
+        show_all_users -> Nullable<Bool>,
+        show_detail_all_users -> Nullable<Bool>,
+        show_followers -> Nullable<Bool>,
+        show_followers_okazu -> Nullable<Bool>,
+        twitter_id -> Nullable<Varchar>,
     }
 }
 

@@ -4,7 +4,7 @@ use chrono::naive::NaiveDate;
 use crate::schema::users;
 use crate::schema::brands;
 use crate::schema::games;
-//use diesel::associations::{belongs_to};
+use uuid::Uuid;
 
 #[derive(Queryable)]
 pub struct Post {
@@ -17,9 +17,31 @@ pub struct Post {
 #[derive(Debug, Clone, Serialize, Queryable, Insertable)]
 pub struct User {
     pub id: String,
-    pub name: String,
+    pub es_user_id: String,
     pub display_name: String,
-    pub password: String,
+    pub comment: Option<String>,
+    pub show_all_users: Option<bool>,
+    pub show_detail_all_users: Option<bool>,
+    pub show_followers: Option<bool>,
+    pub show_followers_okazu: Option<bool>,
+    pub twitter_id: Option<String>,
+}
+
+impl User {
+    pub fn new() -> User {
+        User {
+            id: Uuid::new_v4().to_string(),
+            es_user_id: String::from(""),
+            display_name: String::from(""),
+            comment: None,
+            show_all_users: Some(true),
+            show_detail_all_users: Some(false),
+            show_followers: Some(true),
+            show_followers_okazu: Some(false),
+            twitter_id: None,
+        }
+        
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Queryable, Insertable)]
