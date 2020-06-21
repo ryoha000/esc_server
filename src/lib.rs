@@ -6,6 +6,7 @@ pub mod api;
 pub mod schema;
 pub mod models;
 pub mod actions;
+pub mod middleware;
 
 
 use dotenv::dotenv;

@@ -37,9 +37,11 @@ async fn main() -> std::io::Result<()> {
             .data(pools.clone())
             .wrap(Logger::default())
             .route("/", web::get().to(api::hello_world::hello_world))
+
             .route("/users/{user_id}", web::get().to(api::users::get_user))
             .route("/users", web::get().to(api::users::get_users))
             .route("/users", web::post().to(api::users::signup))
+            .route("/login", web::post().to(api::users::login))
             .route("/brands", web::get().to(api::brands::get_brands))
             .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))
             // for test
@@ -52,6 +54,8 @@ async fn main() -> std::io::Result<()> {
             .route("/games", web::post().to(api::games::add_game))
             // for test
             .route("games/{game_id}", web::post().to(api::games::add_id_game))
+            .route("/timelines", web::get().to(api::timelines::get_timelines))
+            .route("/play/{game_id}", web::post().to(api::play::post_play))
     })
     .bind("127.0.0.1:8088")?
     .run()

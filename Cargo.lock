@@ -783,6 +783,7 @@ dependencies = [
  "dotenv",
  "easy-scraper",
  "env_logger",
+ "futures",
  "html5ever",
  "r2d2",
  "r2d2_redis",

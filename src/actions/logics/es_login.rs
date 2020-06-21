@@ -27,18 +27,21 @@ pub async fn es_login(user_id: &str, password: &str) -> Result<header::HeaderVal
         .with_context(|| "ErogameScape is not respond")?;
 
     let _cookie = res.headers().get_all("set-cookie").iter();
-
-    if _cookie.size_hint().0 < 3 {
-        anyhow::bail!("user_id or password is invalid")
-    }
+    println!("{:?}", _cookie);
 
     let mut concat_cookie = String::new();
+    let mut i = 0;
     for c in _cookie {
+        i += 1;
         println!("{:?}", c);
         let split_cookie: Vec<&str> = c.to_str().unwrap().split(";").collect();
         concat_cookie += split_cookie.get(0).with_context(|| "Can not get cookie")?;
         concat_cookie += "; ";
     }
+    println!("{}", i);
+    // if i < 3 {
+    //     anyhow::bail!("user_id or password is invalid")
+    // }
     println!("{:?}", concat_cookie);
     Ok(header::HeaderValue::from_str(&concat_cookie).unwrap())
 }

@@ -59,7 +59,6 @@ pub async fn execute_on_es(query: String) -> Result<scraper::html::Html> {
         form: Some([("sql", &query)])
     };
     let text = setup_post_client(material).await?;
-    println!("{}", text);
 
     Ok(Html::parse_fragment(&text))
 }

@@ -103,7 +103,7 @@ fn make_query(id: i32) -> String {
 
 fn check_game(_game: &models::Game) -> bool {
     let mut is_ok = true;
-    if _game.id != 0 || _game.brand_id != 0 {
+    if _game.id == 0 || _game.brand_id == 0 {
         is_ok = false;
     }
     for inv_id in INVALID_GAME_ID.iter() {
