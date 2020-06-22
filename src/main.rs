@@ -41,23 +41,26 @@ async fn main() -> std::io::Result<()> {
             .route("/users/{user_id}", web::get().to(api::users::get_user))
             .route("/users", web::get().to(api::users::get_users))
             .route("/users", web::post().to(api::users::signup))
+            .route("/users/{user_id}/follows", web::get().to(api::follows::get_followers))
+            .route("/users/{followee_id}/follows", web::post().to(api::follows::post_follows))
             .route("/login", web::post().to(api::users::login))
+
             .route("/brands", web::get().to(api::brands::get_brands))
             .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))
             // for test
             .route("/brands", web::post().to(api::brands::add_brand))
             // for test
             .route("brands/{brand_id}", web::post().to(api::brands::add_id_brand))
+
             .route("/games", web::get().to(api::games::get_games))
             .route("/games/{game_id}", web::get().to(api::games::get_game))
             // for test
             .route("/games", web::post().to(api::games::add_game))
             // for test
             .route("games/{game_id}", web::post().to(api::games::add_id_game))
+            
             .route("/timelines", web::get().to(api::timelines::get_timelines))
             .route("/play/{game_id}", web::post().to(api::play::post_play))
-            .route("/follows/{followee_id}", web::post().to(api::follows::post_follows))
-            .route("/users/{user_id}/follows", web::get().to(api::follows::get_followers))
     })
     .bind("127.0.0.1:8088")?
     .run()
