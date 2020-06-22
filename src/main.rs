@@ -63,7 +63,7 @@ async fn main() -> std::io::Result<()> {
             .route("/play/{game_id}", web::post().to(api::play::post_play))
             .route("/lists", web::get().to(api::lists::get_lists))
             .route("/lists", web::post().to(api::lists::post_list))
-            .route("/lists/{list_id}", web::get().to(api::listmaps::get_listmaps))
+            .route("/lists/{list_id}", web::get().to(api::lists::get_list))
             .route("/lists/{list_id}", web::post().to(api::listmaps::add_game_list))
     })
     .bind("127.0.0.1:8088")?

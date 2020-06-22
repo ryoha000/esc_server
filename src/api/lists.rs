@@ -65,3 +65,33 @@ pub async fn get_lists(
 
     Ok(HttpResponse::Ok().json(lists))
 }
+
+pub async fn get_list(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    list_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let list_uid: uuid::Uuid = list_id.into_inner().parse().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+    
+    let list = web::block(move || lists::find_list_by_uid(list_uid, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(list))
+}
