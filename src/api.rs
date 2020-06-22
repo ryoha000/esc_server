@@ -5,3 +5,4 @@ pub mod games;
 pub mod timelines;
 pub mod play;
 pub mod follows;
+pub mod lists;

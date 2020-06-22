@@ -72,6 +72,20 @@ table! {
 }
 
 table! {
+    lists (id) {
+        id -> Varchar,
+        user_id -> Varchar,
+        name -> Text,
+        comment -> Text,
+        priority -> Int4,
+        url -> Nullable<Text>,
+        is_public -> Bool,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+table! {
     timelines (id) {
         id -> Varchar,
         user_id -> Varchar,
@@ -96,6 +110,7 @@ table! {
 }
 
 joinable!(games -> brands (brand_id));
+joinable!(lists -> users (user_id));
 joinable!(timelines -> games (game_id));
 joinable!(timelines -> users (user_id));
 
@@ -103,6 +118,7 @@ allow_tables_to_appear_in_same_query!(
     brands,
     follows,
     games,
+    lists,
     timelines,
     users,
 );

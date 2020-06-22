@@ -1,7 +1,9 @@
 use actix_web::{Error, HttpRequest, FromRequest};
 use actix_web::dev::Payload;
 use futures::future::{ok, Ready};
-use anyhow::{Result};
+use anyhow::{Context, Result};
+use super::models;
+use std::ops::DerefMut;
 
 pub struct Authorized {
     pub session_id: Option<String>
@@ -33,4 +35,35 @@ fn is_authorized(req: &HttpRequest) -> Option<String> {
     } else {
         None
     }
+}
+
+pub struct Me {
+    pub user_id: String,
+    pub header: String,
+    pub session_id: String,
+}
+
+pub fn check_user(auth: Authorized, redis_conn: &mut diesel::r2d2::PooledConnection<r2d2_redis::RedisConnectionManager>) -> Option<Me> {
+    let mut user_id: Option<String> = None;
+    let mut header: Option<String> = None;
+    if let Some(session_id) = &auth.session_id {
+        println!("{}", session_id);
+        match r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()) {
+            Ok(res) => header = Some(res),
+            _ => {}
+        }
+        match r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()) {
+            Ok(res) => user_id = Some(res),
+            _ => {}
+        }
+    }
+    if user_id != None && header != None {
+        let me = Me {
+            user_id: user_id.unwrap(),
+            header: header.unwrap(),
+            session_id: auth.session_id.unwrap(),
+        };
+        return Some(me)
+    }
+    None
 }

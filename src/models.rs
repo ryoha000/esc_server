@@ -6,6 +6,7 @@ use crate::schema::brands;
 use crate::schema::games;
 use crate::schema::timelines;
 use crate::schema::follows;
+use crate::schema::lists;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -222,6 +223,36 @@ impl Follow {
             comment: None,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
             deleted_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[belongs_to(User)]
+pub struct List {
+    pub id: String,
+    pub user_id: String,
+    pub name: String,
+    pub comment: String,
+    pub priority: i32,
+    pub url: Option<String>,
+    pub is_public: bool,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+impl List {
+    pub fn new(user_id: String, name: String, comment: String) -> List {
+        List {
+            id: Uuid::new_v4().to_string(),
+            user_id: user_id,
+            name: name,
+            comment: comment,
+            priority: 0,
+            url: None,
+            is_public: true,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+            updated_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
         }
     }
 }
