@@ -6,3 +6,4 @@ pub mod timelines;
 pub mod play;
 pub mod follows;
 pub mod lists;
+pub mod listmaps;

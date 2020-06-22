@@ -72,6 +72,14 @@ table! {
 }
 
 table! {
+    listmaps (id) {
+        id -> Varchar,
+        list_id -> Varchar,
+        game_id -> Int4,
+    }
+}
+
+table! {
     lists (id) {
         id -> Varchar,
         user_id -> Varchar,
@@ -110,6 +118,8 @@ table! {
 }
 
 joinable!(games -> brands (brand_id));
+joinable!(listmaps -> games (game_id));
+joinable!(listmaps -> lists (list_id));
 joinable!(lists -> users (user_id));
 joinable!(timelines -> games (game_id));
 joinable!(timelines -> users (user_id));
@@ -118,6 +128,7 @@ allow_tables_to_appear_in_same_query!(
     brands,
     follows,
     games,
+    listmaps,
     lists,
     timelines,
     users,

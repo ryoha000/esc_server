@@ -7,6 +7,7 @@ use crate::schema::games;
 use crate::schema::timelines;
 use crate::schema::follows;
 use crate::schema::lists;
+use crate::schema::listmaps;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -94,7 +95,8 @@ impl Brand {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "games"]
 #[belongs_to(Brand)]
 pub struct Game {
     pub id: i32,
@@ -227,7 +229,8 @@ impl Follow {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "lists"]
 #[belongs_to(User)]
 pub struct List {
     pub id: String,
@@ -253,6 +256,26 @@ impl List {
             is_public: true,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
             updated_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "listmaps"]
+#[belongs_to(List)]
+#[belongs_to(Game)]
+pub struct Listmap {
+    pub id: String,
+    pub list_id: String,
+    pub game_id: i32,
+}
+
+impl Listmap {
+    pub fn new(list_id: String, game_id: i32) -> Listmap {
+        Listmap {
+            id: Uuid::new_v4().to_string(),
+            list_id: list_id,
+            game_id: game_id,
         }
     }
 }
