@@ -44,11 +44,20 @@ pub fn find_followers_by_uid(
     uid: Uuid,
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::User>>, diesel::result::Error> {
-    use crate::schema::users::dsl::*;
-
     // TODO: ちゃんとdieselでかく
     let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.follower_id = users.id WHERE follows.followee_id = \'{}\';", uid.to_string());
     let followers = diesel::sql_query(query).load(conn).optional()?;
 
     Ok(followers)
+}
+
+pub fn find_followees_by_uid(
+    uid: Uuid,
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::User>>, diesel::result::Error> {
+    // TODO: ちゃんとdieselでかく
+    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.followee_id = users.id WHERE follows.follower_id = \'{}\';", uid.to_string());
+    let followees = diesel::sql_query(query).load(conn).optional()?;
+
+    Ok(followees)
 }

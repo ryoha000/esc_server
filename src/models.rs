@@ -204,6 +204,9 @@ pub struct Follow {
     pub id: String,
     pub followee_id: String,
     pub follower_id: String,
+    pub allowed: bool,
+    pub mutual: bool,
+    pub comment: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub deleted_at: Option<chrono::NaiveDateTime>,
 }
@@ -214,6 +217,9 @@ impl Follow {
             id: Uuid::new_v4().to_string(),
             followee_id: followee_id,
             follower_id: follower_id,
+            allowed: false,
+            mutual: false,
+            comment: None,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
             deleted_at: None,
         }

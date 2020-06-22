@@ -26,6 +26,9 @@ table! {
         id -> Varchar,
         followee_id -> Varchar,
         follower_id -> Varchar,
+        allowed -> Bool,
+        mutual -> Bool,
+        comment -> Nullable<Text>,
         created_at -> Timestamp,
         deleted_at -> Nullable<Timestamp>,
     }
