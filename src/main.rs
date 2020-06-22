@@ -56,6 +56,8 @@ async fn main() -> std::io::Result<()> {
             .route("games/{game_id}", web::post().to(api::games::add_id_game))
             .route("/timelines", web::get().to(api::timelines::get_timelines))
             .route("/play/{game_id}", web::post().to(api::play::post_play))
+            .route("/follows/{followee_id}", web::post().to(api::follows::post_follows))
+            .route("/users/{user_id}/follows", web::get().to(api::follows::get_followers))
     })
     .bind("127.0.0.1:8088")?
     .run()

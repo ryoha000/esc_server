@@ -1,6 +1,4 @@
-use actix_web::{web, Error, HttpResponse, HttpRequest, FromRequest};
-use actix_web::dev::Payload;
-use super::super::actions::logics::{hash::make_hashed_string, es_login};
+use actix_web::{web, Error, HttpResponse};
 use std::ops::DerefMut;
 use super::super::middleware;
 use super::super::actions::timelines;
@@ -24,16 +22,14 @@ pub async fn post_play(
     println!("{:?}", auth.session_id);
     if let Some(session_id) = auth.session_id {
         println!("{}", session_id);
-        let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_id:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
+        let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()
         })?;
-        user_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).query(redis_conn.deref_mut()).map_err(|e| {
+        user_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()
         })?;
-        println!("{}", header);
-        println!("{}", user_id);
     }
 
     let new_timeline = super::super::models::Timeline::new(user_id, game_id.into_inner(), 0);

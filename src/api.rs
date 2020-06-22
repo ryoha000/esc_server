@@ -4,3 +4,4 @@ pub mod brands;
 pub mod games;
 pub mod timelines;
 pub mod play;
+pub mod follows;

@@ -88,11 +88,11 @@ pub async fn signup(
             new_user.es_user_id = form.name.clone();
             new_user.display_name = form.display_name.clone();
             let user = web::block(move || users::insert_new_user(new_user, &conn))
-            .await
-            .map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
             
             
             let session_id = uuid::Uuid::new_v4().to_string();
@@ -110,7 +110,7 @@ pub async fn signup(
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
                 })?;
-            res = HttpResponse::Ok().header("set-cookie", session_id).json(user);
+            res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
         }
 
     Ok(res)

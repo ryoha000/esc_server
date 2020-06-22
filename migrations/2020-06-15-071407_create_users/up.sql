@@ -1,7 +1,7 @@
 -- Your SQL goes here
 CREATE TABLE users (
   id VARCHAR NOT NULL PRIMARY KEY,
-  es_user_id VARCHAR NOT NULL,
+  es_user_id VARCHAR NOT NULL UNIQUE,
   display_name VARCHAR NOT NULL,
   comment TEXT,
   show_all_users BOOLEAN DEFAULT TRUE,

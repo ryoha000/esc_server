@@ -16,7 +16,8 @@ pub struct Post {
     pub published: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Insertable)]
+#[derive(Debug, Clone, Serialize, Queryable, Insertable, QueryableByName)]
+#[table_name = "users"]
 pub struct User {
     pub id: String,
     pub es_user_id: String,
@@ -195,9 +196,10 @@ impl Timeline {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
 #[belongs_to(parent = User, foreign_key = "followee_id")]
 #[belongs_to(parent = User, foreign_key = "follower_id")]
+#[table_name = "follows"]
 pub struct Follow {
     pub id: String,
     pub followee_id: String,
