@@ -1,9 +1,7 @@
-use actix_web::{web, Error, HttpResponse, HttpRequest, FromRequest};
+use actix_web::{Error, HttpRequest, FromRequest};
 use actix_web::dev::Payload;
-use actix_web::error::ErrorUnauthorized;
-use futures::future::{ok, err, Ready};
-use reqwest::header;
-use anyhow::{Context, Result};
+use futures::future::{ok, Ready};
+use anyhow::{Result};
 
 pub struct Authorized {
     pub session_id: Option<String>

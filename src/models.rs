@@ -5,6 +5,7 @@ use crate::schema::users;
 use crate::schema::brands;
 use crate::schema::games;
 use crate::schema::timelines;
+use crate::schema::follows;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -190,6 +191,29 @@ impl Timeline {
             game_id: game_id,
             log_type: log_type,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0)
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable)]
+#[belongs_to(parent = User, foreign_key = "followee_id")]
+#[belongs_to(parent = User, foreign_key = "follower_id")]
+pub struct Follow {
+    pub id: String,
+    pub followee_id: String,
+    pub follower_id: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
+}
+
+impl Follow {
+    pub fn new(followee_id: String, follower_id: String) -> Follow {
+        Follow {
+            id: Uuid::new_v4().to_string(),
+            followee_id: followee_id,
+            follower_id: follower_id,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+            deleted_at: None,
         }
     }
 }

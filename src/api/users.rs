@@ -103,7 +103,8 @@ pub async fn signup(
             
             // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
             r2d2_redis::redis::pipe()
-                .cmd("SET").arg(&format!("session_id:{}", session_id)).arg(cookie.to_str().unwrap())
+                .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
+                .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
                 .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
                 .query(redis_conn.deref_mut()).map_err(|e| {
                     eprintln!("{}", e);
@@ -151,14 +152,15 @@ pub async fn login(
 
         // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
         r2d2_redis::redis::pipe()
-            .cmd("SET").arg(&format!("session_id:{}", session_id)).arg(cookie.to_str().unwrap())
-            .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id)
+            .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
+            .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
+            .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
             .query(redis_conn.deref_mut()).map_err(|e| {
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?;
         
-        res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).body("success login");
+        res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
     }
 
     Ok(res)

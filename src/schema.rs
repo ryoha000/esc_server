@@ -22,6 +22,16 @@ table! {
 }
 
 table! {
+    follows (id) {
+        id -> Varchar,
+        followee_id -> Varchar,
+        follower_id -> Varchar,
+        created_at -> Timestamp,
+        deleted_at -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     games (id) {
         id -> Int4,
         gamename -> Nullable<Text>,
@@ -88,6 +98,7 @@ joinable!(timelines -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     brands,
+    follows,
     games,
     timelines,
     users,
