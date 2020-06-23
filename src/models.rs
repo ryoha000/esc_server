@@ -9,6 +9,7 @@ use crate::schema::follows;
 use crate::schema::lists;
 use crate::schema::listmaps;
 use crate::schema::listlogs;
+use crate::schema::reviews;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -299,6 +300,108 @@ impl Listlog {
             timeline_id: timeline_id,
             list_id: list_id,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "reviews"]
+#[belongs_to(User)]
+#[belongs_to(Game)]
+pub struct Review {
+    pub id: String,
+    pub game_id: i32,
+    pub user_id: String,
+    pub es_user_id: String,
+    pub tokuten: Option<i32>,
+    pub tourokubi: Option<chrono::NaiveDateTime>,
+    pub hitokoto: Option<String>,
+    pub memo: Option<String>,
+    pub netabare: Option<bool>,
+    pub giveup: Option<bool>,
+    pub possession: Option<bool>,
+    pub play: Option<bool>,
+    pub before_hitokoto: Option<String>,
+    pub before_tokuten: Option<i32>,
+    pub before_tourokubi: Option<chrono::NaiveDateTime>,
+    pub display: Option<bool>,
+    pub play_tourokubi: Option<chrono::NaiveDateTime>,
+    pub display_unique_count: Option<i32>,
+    pub sage: Option<bool>,
+    pub before_purchase_will: Option<String>,
+    pub before_sage: Option<bool>,
+    pub total_play_time: Option<i32>,
+    pub time_before_understanding_fun: Option<i32>,
+    pub okazu_tokuten: Option<i32>,
+    pub trial_version_hitokoto: Option<String>,
+    pub trial_version_hitokoto_sage: Option<bool>,
+    pub trial_version_hitokoto_tourokubi: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+impl Review {
+    pub fn initialize() -> Review {
+        Review {
+            id: Uuid::new_v4().to_string(),
+            game_id: 0,
+            user_id: String::from(""),
+            es_user_id: String::from(""),
+            tokuten: None,
+            tourokubi: None,
+            hitokoto: None,
+            memo: None,
+            netabare: None,
+            giveup: None,
+            possession: None,
+            play: None,
+            before_hitokoto: None,
+            before_tokuten: None,
+            before_tourokubi: None,
+            display: None,
+            play_tourokubi: None,
+            display_unique_count: None,
+            sage: None,
+            before_purchase_will: None,
+            before_sage: None,
+            total_play_time: None,
+            time_before_understanding_fun: None,
+            okazu_tokuten: None,
+            trial_version_hitokoto: None,
+            trial_version_hitokoto_sage: None,
+            trial_version_hitokoto_tourokubi: None,
+            created_at: None,
+        }
+    }
+    pub fn new(game_id: i32, user_id: String, es_user_id: String) -> Review {
+        Review {
+            id: Uuid::new_v4().to_string(),
+            game_id: game_id,
+            user_id: user_id,
+            es_user_id: es_user_id,
+            tokuten: None,
+            tourokubi: None,
+            hitokoto: None,
+            memo: None,
+            netabare: None,
+            giveup: None,
+            possession: None,
+            play: None,
+            before_hitokoto: None,
+            before_tokuten: None,
+            before_tourokubi: None,
+            display: None,
+            play_tourokubi: None,
+            display_unique_count: None,
+            sage: None,
+            before_purchase_will: None,
+            before_sage: None,
+            total_play_time: None,
+            time_before_understanding_fun: None,
+            okazu_tokuten: None,
+            trial_version_hitokoto: None,
+            trial_version_hitokoto_sage: None,
+            trial_version_hitokoto_tourokubi: None,
+            created_at: None,
         }
     }
 }

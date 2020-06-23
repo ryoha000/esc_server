@@ -103,6 +103,39 @@ table! {
 }
 
 table! {
+    reviews (id) {
+        id -> Varchar,
+        game_id -> Int4,
+        user_id -> Varchar,
+        es_user_id -> Text,
+        tokuten -> Nullable<Int4>,
+        tourokubi -> Nullable<Timestamp>,
+        hitokoto -> Nullable<Text>,
+        memo -> Nullable<Text>,
+        netabare -> Nullable<Bool>,
+        giveup -> Nullable<Bool>,
+        possession -> Nullable<Bool>,
+        play -> Nullable<Bool>,
+        before_hitokoto -> Nullable<Text>,
+        before_tokuten -> Nullable<Int4>,
+        before_tourokubi -> Nullable<Timestamp>,
+        display -> Nullable<Bool>,
+        play_tourokubi -> Nullable<Timestamp>,
+        display_unique_count -> Nullable<Int4>,
+        sage -> Nullable<Bool>,
+        before_purchase_will -> Nullable<Text>,
+        before_sage -> Nullable<Bool>,
+        total_play_time -> Nullable<Int4>,
+        time_before_understanding_fun -> Nullable<Int4>,
+        okazu_tokuten -> Nullable<Int4>,
+        trial_version_hitokoto -> Nullable<Text>,
+        trial_version_hitokoto_sage -> Nullable<Bool>,
+        trial_version_hitokoto_tourokubi -> Nullable<Timestamp>,
+        created_at -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     timelines (id) {
         id -> Varchar,
         user_id -> Varchar,
@@ -132,6 +165,8 @@ joinable!(listlogs -> timelines (timeline_id));
 joinable!(listmaps -> games (game_id));
 joinable!(listmaps -> lists (list_id));
 joinable!(lists -> users (user_id));
+joinable!(reviews -> games (game_id));
+joinable!(reviews -> users (user_id));
 joinable!(timelines -> games (game_id));
 joinable!(timelines -> users (user_id));
 
@@ -142,6 +177,7 @@ allow_tables_to_appear_in_same_query!(
     listlogs,
     listmaps,
     lists,
+    reviews,
     timelines,
     users,
 );
