@@ -72,6 +72,15 @@ table! {
 }
 
 table! {
+    listlogs (id) {
+        id -> Varchar,
+        timeline_id -> Varchar,
+        list_id -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     listmaps (id) {
         id -> Varchar,
         list_id -> Varchar,
@@ -118,6 +127,8 @@ table! {
 }
 
 joinable!(games -> brands (brand_id));
+joinable!(listlogs -> lists (list_id));
+joinable!(listlogs -> timelines (timeline_id));
 joinable!(listmaps -> games (game_id));
 joinable!(listmaps -> lists (list_id));
 joinable!(lists -> users (user_id));
@@ -128,6 +139,7 @@ allow_tables_to_appear_in_same_query!(
     brands,
     follows,
     games,
+    listlogs,
     listmaps,
     lists,
     timelines,

@@ -8,6 +8,7 @@ use crate::schema::timelines;
 use crate::schema::follows;
 use crate::schema::lists;
 use crate::schema::listmaps;
+use crate::schema::listlogs;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -276,6 +277,28 @@ impl Listmap {
             id: Uuid::new_v4().to_string(),
             list_id: list_id,
             game_id: game_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "listlogs"]
+#[belongs_to(List)]
+#[belongs_to(Timeline)]
+pub struct Listlog {
+    pub id: String,
+    pub timeline_id: String,
+    pub list_id: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl Listlog {
+    pub fn new(timeline_id: String, list_id: String) -> Listlog {
+        Listlog {
+            id: Uuid::new_v4().to_string(),
+            timeline_id: timeline_id,
+            list_id: list_id,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
         }
     }
 }

@@ -1,6 +1,9 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::middleware;
 use super::super::actions::lists;
+use super::super::actions::timelines;
+use super::super::actions::listlogs;
+use super::super::models;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,13 +29,14 @@ pub async fn post_list(
 
     match middleware::check_user(auth, &mut redis_conn) {
         Some(me) => {
-            let new_list = super::super::models::List::new(me.user_id, form.name.clone(), form.comment.clone());
+            let new_list = models::List::new(me.user_id, form.name.clone(), form.comment.clone());
             let _list = web::block(move || lists::insert_new_list(new_list, &conn))
                 .await
                 .map_err(|e| {
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
                 })?;
+            
             return Ok(HttpResponse::Ok().json(_list))
         },
         _ => {
