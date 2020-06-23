@@ -2,6 +2,8 @@ use actix_web::{web, Error, HttpResponse};
 use super::super::middleware;
 use super::super::actions::lists;
 use super::super::actions::listmaps;
+use super::super::actions::timelines;
+use super::super::actions::listlogs;
 use super::super::models;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +30,8 @@ pub async fn add_game_list(
 
     match middleware::check_user(auth, &mut redis_conn) {
         Some(me) => {
-            let list_uid: uuid::Uuid = list_id.into_inner().parse().map_err(|e| {
+            let list_id: String = list_id.into_inner();
+            let list_uid: uuid::Uuid = list_id.parse().map_err(|e| {
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?;
@@ -66,8 +69,38 @@ pub async fn add_game_list(
                             eprintln!("{}", e);
                             HttpResponse::InternalServerError().finish()
                         })?;
-        
-                    return Ok(HttpResponse::Ok().json(_listmaps))
+
+                    for _lm in _listmaps {
+                        let conn = pools.db.get().map_err(|_| {
+                            eprintln!("couldn't get db connection from pools");
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+
+                        let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, 2);
+
+                        let _timeline = web::block(move || timelines::insert_new_timeline(new_timeline, &conn))
+                            .await
+                            .map_err(|e| {
+                                eprintln!("{}", e);
+                                HttpResponse::InternalServerError().finish()
+                            })?;
+
+                        let conn = pools.db.get().map_err(|_| {
+                            eprintln!("couldn't get db connection from pools");
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+
+                        let new_listlog = models::Listlog::new(_timeline.id, list_id.clone());
+
+                        let _ = web::block(move || listlogs::insert_new_listlog(new_listlog, &conn))
+                            .await
+                            .map_err(|e| {
+                                eprintln!("{}", e);
+                                HttpResponse::InternalServerError().finish()
+                            })?;
+                    }
+
+                    return Ok(HttpResponse::Created().body("ok"))
                 },
                 _ => {
                     let res = HttpResponse::NotFound().body("not found");

@@ -1,8 +1,6 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::middleware;
 use super::super::actions::lists;
-use super::super::actions::timelines;
-use super::super::actions::listlogs;
 use super::super::models;
 use serde::{Deserialize, Serialize};
 
