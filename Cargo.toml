@@ -28,3 +28,4 @@ sha2 = "*"
 redis = { version = "*", features = ["r2d2"] }
 r2d2_redis = "0.13.0"
 futures = "*"
+tokio = { version = "*", features = ["time"]}

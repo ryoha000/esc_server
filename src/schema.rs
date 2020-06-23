@@ -132,6 +132,7 @@ table! {
         trial_version_hitokoto_sage -> Nullable<Bool>,
         trial_version_hitokoto_tourokubi -> Nullable<Timestamp>,
         created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }
 

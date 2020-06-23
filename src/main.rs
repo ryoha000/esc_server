@@ -23,12 +23,13 @@ async fn main() -> std::io::Result<()> {
     let redis_pool = r2d2_redis::r2d2::Pool::builder()
         .build(redis_manager)
         .expect("Failed to create redis pool.");
-
+    
     let pools = esc_server::Pools {
         db: pool,
         redis: redis_pool,
     };
-
+    
+    // esc_server::db_setup(&pools).await;
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
     println!("Hello, world!");
@@ -65,6 +66,8 @@ async fn main() -> std::io::Result<()> {
             .route("/lists", web::post().to(api::lists::post_list))
             .route("/lists/{list_id}", web::get().to(api::lists::get_list))
             .route("/lists/{list_id}", web::post().to(api::listmaps::add_game_list))
+            .route("/reviews", web::post().to(api::reviews::add_all_review))
+            .route("/reviews", web::get().to(api::reviews::get_reviews))
     })
     .bind("127.0.0.1:8088")?
     .run()

@@ -85,6 +85,13 @@ pub fn option_date_from_string(b: String) -> Option<chrono::NaiveDate> {
     }
 }
 
+pub fn option_datetime_from_string(b: String) -> Option<chrono::NaiveDateTime> {
+    match b.parse() {
+        Ok(b) => Some(b),
+        _ => None
+    }
+}
+
 pub fn option_string_from_string(b: String) -> Option<String> {
     match &*b {
         "" => None,

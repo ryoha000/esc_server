@@ -337,6 +337,7 @@ pub struct Review {
     pub trial_version_hitokoto_sage: Option<bool>,
     pub trial_version_hitokoto_tourokubi: Option<chrono::NaiveDateTime>,
     pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
 impl Review {
@@ -370,6 +371,7 @@ impl Review {
             trial_version_hitokoto_sage: None,
             trial_version_hitokoto_tourokubi: None,
             created_at: None,
+            updated_at: None,
         }
     }
     pub fn new(game_id: i32, user_id: String, es_user_id: String) -> Review {
@@ -402,6 +404,7 @@ impl Review {
             trial_version_hitokoto_sage: None,
             trial_version_hitokoto_tourokubi: None,
             created_at: None,
+            updated_at: None,
         }
     }
 }

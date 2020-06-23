@@ -13,6 +13,7 @@ use dotenv::dotenv;
 use std::env;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use actix_web::{web, Error, HttpResponse};
 
 #[cfg(test)]
 pub mod tests;
@@ -49,4 +50,20 @@ pub fn login1() -> String {
     dotenv().ok();
 
     env::var("ADMIN_USER_PASS").expect("ADMIN_USER_PASS must be set")
+}
+
+pub async fn db_setup(pools: &Pools) {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    }).unwrap();
+
+    let mut new_user = models::User::new();
+    new_user.id = String::from("");
+    new_user.es_user_id = String::from("批評空間のユーザー");
+    new_user.display_name = String::from("批評空間のユーザー");
+    let user = web::block(move || actions::users::insert_new_user(new_user, &conn))
+        .await
+        .unwrap();
+    println!("{:?}", user)
 }

@@ -29,5 +29,6 @@ CREATE TABLE reviews (
   trial_version_hitokoto text, --- 体験版一言
   trial_version_hitokoto_sage boolean, --- 体験版一言をトップページに表示するか否か t:表示 f:表示しない
   trial_version_hitokoto_tourokubi timestamp, --- 体験版一言を登録した登録日時
-  created_at timestamp --- データが登録された日時
+  created_at timestamp, --- データが登録された日時
+  updated_at timestamp --- データが更新された日時
 )

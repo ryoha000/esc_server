@@ -7,3 +7,4 @@ pub mod play;
 pub mod follows;
 pub mod lists;
 pub mod listmaps;
+pub mod reviews;
