@@ -49,11 +49,11 @@ pub fn insert_new_review(
 pub fn insert_new_reviews(
     new_reviews: Vec<models::Review>,
     conn: &PgConnection,
-) -> Result<(), diesel::result::Error> {
+) -> Result<Vec<models::Review>, diesel::result::Error> {
     use crate::schema::reviews::dsl::*;
 
-    for r in new_reviews {
-        match diesel::insert_into(reviews).values(&r).execute(conn) {
+    for r in &new_reviews {
+        match diesel::insert_into(reviews).values(r).execute(conn) {
             Ok(_) => {},
             e => {
                 eprintln!("{:?}", e);
@@ -63,5 +63,5 @@ pub fn insert_new_reviews(
         
     }
 
-    Ok(())
+    Ok(new_reviews)
 }

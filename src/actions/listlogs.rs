@@ -45,3 +45,15 @@ pub fn insert_new_listlog(
 
     Ok(new_listlog)
 }
+
+/// Run query using Diesel to insert a new database row and return the result.
+pub fn insert_new_listlogs(
+    new_listlogs: Vec<models::Listlog>,
+    conn: &PgConnection,
+) -> Result<Vec<models::Listlog>, diesel::result::Error> {
+    use crate::schema::listlogs::dsl::*;
+
+    diesel::insert_into(listlogs).values(&new_listlogs).execute(conn)?;
+
+    Ok(new_listlogs)
+}

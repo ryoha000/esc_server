@@ -1,6 +1,8 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::reviews;
 use super::super::actions::users;
+use super::super::actions::timelines;
+use super::super::actions::reviewlogs;
 use super::super::models;
 use std::ops::DerefMut;
 
@@ -187,12 +189,44 @@ pub async fn add_recent_reviews(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let review = web::block(move || reviews::insert_new_reviews(insert_reviews, &conn))
+    let reviews = web::block(move || reviews::insert_new_reviews(insert_reviews, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
 
-    Ok(HttpResponse::Ok().json(review))
+    let mut new_timelines: Vec<models::Timeline> = Vec::new();
+    let mut new_reviewlogs: Vec<models::Reviewlog> = Vec::new();
+    for cr in &reviews {
+        let _timeline = models::Timeline::new(cr.user_id.clone(), cr.game_id, 2);
+        new_reviewlogs.push(models::Reviewlog::new(_timeline.id.clone(), cr.id.clone()));
+        new_timelines.push(_timeline);
+    }
+    
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _timelines = web::block(move || timelines::insert_new_timelines(new_timelines, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _ = web::block(move || reviewlogs::insert_new_reviewlogs(new_reviewlogs, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(reviews))
 }
