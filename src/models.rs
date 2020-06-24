@@ -10,6 +10,7 @@ use crate::schema::lists;
 use crate::schema::listmaps;
 use crate::schema::listlogs;
 use crate::schema::reviews;
+use crate::schema::reviewlogs;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -408,6 +409,28 @@ impl Review {
             es_id: None,
             created_at: Some(chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0)),
             updated_at: Some(chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "reviewlogs"]
+#[belongs_to(Review)]
+#[belongs_to(Timeline)]
+pub struct Reviewlog {
+    pub id: String,
+    pub timeline_id: String,
+    pub review_id: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl Reviewlog {
+    pub fn new(timeline_id: String, review_id: String) -> Reviewlog {
+        Reviewlog {
+            id: Uuid::new_v4().to_string(),
+            timeline_id: timeline_id,
+            review_id: review_id,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
         }
     }
 }

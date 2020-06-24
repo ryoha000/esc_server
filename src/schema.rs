@@ -103,6 +103,15 @@ table! {
 }
 
 table! {
+    reviewlogs (id) {
+        id -> Varchar,
+        timeline_id -> Varchar,
+        review_id -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     reviews (id) {
         id -> Varchar,
         game_id -> Int4,
@@ -167,6 +176,8 @@ joinable!(listlogs -> timelines (timeline_id));
 joinable!(listmaps -> games (game_id));
 joinable!(listmaps -> lists (list_id));
 joinable!(lists -> users (user_id));
+joinable!(reviewlogs -> reviews (review_id));
+joinable!(reviewlogs -> timelines (timeline_id));
 joinable!(reviews -> games (game_id));
 joinable!(reviews -> users (user_id));
 joinable!(timelines -> games (game_id));
@@ -179,6 +190,7 @@ allow_tables_to_appear_in_same_query!(
     listlogs,
     listmaps,
     lists,
+    reviewlogs,
     reviews,
     timelines,
     users,
