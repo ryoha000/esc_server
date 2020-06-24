@@ -15,8 +15,8 @@ const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250,
 pub async fn get_all_reviews() -> Result<Vec<models::Review>> {
     let mut _reviews: Vec<models::Review> = Vec::new();
     let get_review = async {
-        for i in 0..301 {
-            let query = format!("WHERE game > {} AND game < {}", i, i + 10);
+        for i in 0..120 {
+            let query = format!("WHERE id > {} AND id < {}", i * 20000, i * 20000 + 20000);
             println!("{}", query);
             let fragment = execute_on_es(make_query(query)).await.unwrap();
             let tr_selector = Selector::parse("tr").unwrap();
@@ -32,10 +32,9 @@ pub async fn get_all_reviews() -> Result<Vec<models::Review>> {
     Ok(_reviews)
 }
 
-pub async fn get_recent_reviews() -> Result<Vec<models::Review>> {
+pub async fn get_recent_reviews(max_id: i32) -> Result<Vec<models::Review>> {
     let mut _reviews: Vec<models::Review> = Vec::new();
-    let query = format!("WHERE game > {} AND game < {}", i, i + 10);
-    println!("{}", query);
+    let query = format!("WHERE id > {}", max_id);
     let fragment = execute_on_es(make_query(query)).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     for tr in fragment.select(&tr_selector) {
@@ -46,44 +45,6 @@ pub async fn get_recent_reviews() -> Result<Vec<models::Review>> {
     }
     Ok(_reviews)
 }
-
-// pub async fn get_latest_game_by_id(id: i32) -> Result<models::Game> {
-//     let fragment = execute_on_es(make_query(id)).await.unwrap();
-//     let tr_selector = Selector::parse("tr").unwrap();
-
-//     let mut select_tr = fragment.select(&tr_selector);
-//     select_tr.next().with_context(|| "there is no tr")?;
-//     let tr = select_tr.next().with_context(|| "Not Found")?;
-//     let mut _game = models::Game::get_game_from_row(tr);
-//     Ok(_game)
-// }
-
-// pub async fn get_test_game(header: reqwest::header::HeaderMap) -> models::Game {
-//     let client = reqwest::Client::builder()
-//         .default_headers(header)
-//         .build()
-//         .unwrap();
-
-//     let res = client.get("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/usersql_exec.php?sql_id=2726")
-//         .send()
-//         .await
-//         .unwrap()
-//         .text()
-//         .await
-//         .unwrap();
-
-//     let fragment = Html::parse_fragment(&res);
-//     let tr_selector = Selector::parse("tr").unwrap();
-    
-//     let mut _games: Vec<models::Game> = Vec::new();
-//     for tr in fragment.select(&tr_selector) {
-//         let mut _game = models::Game::get_game_from_row(tr);
-//         if check_game(&_game) {
-//             _games.push(_game);
-//         }
-//     }
-//     _games.get(0).unwrap().clone()
-// }
 
 fn make_query(where_query: String) -> String {
     format!("{}{}", r"
@@ -113,7 +74,8 @@ SELECT
     trial_version_hitokoto,
     trial_version_hitokoto_sage,
     trial_version_hitokoto_tourokubi,
-    timestamp
+    timestamp,
+    id
 FROM userreview
         " , where_query)
 }
@@ -167,6 +129,7 @@ impl models::Review {
                 24 => _review.trial_version_hitokoto_sage = option_bool_from_tf(td.inner_html()),
                 25 => _review.trial_version_hitokoto_tourokubi = option_datetime_from_string(td.inner_html()),
                 26 => _review.created_at = option_datetime_from_string(td.inner_html()),
+                27 => _review.es_id = option_i32_from_string(td.inner_html()),
                 _ => {}
             }
         }

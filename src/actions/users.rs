@@ -60,3 +60,16 @@ pub fn insert_new_user(
 
     Ok(new_user)
 }
+
+pub fn get_all_user_id(
+    conn: &PgConnection,
+) -> Result<Option<Vec<(String, String)>>, diesel::result::Error> {
+    use crate::schema::users::dsl::*;
+
+    let user = users
+        .select((id, es_user_id))
+        .load::<(String, String)>(conn)
+        .optional()?;
+
+    Ok(user)
+}
