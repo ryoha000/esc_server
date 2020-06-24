@@ -70,6 +70,14 @@ pub async fn add_game_list(
                             HttpResponse::InternalServerError().finish()
                         })?;
 
+                    // 新しいTimeline の配列
+                    let mut new_timelines: Vec<models::Timeline> = Vec::new();
+
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
                     for _lm in _listmaps {
                         let conn = pools.db.get().map_err(|_| {
                             eprintln!("couldn't get db connection from pools");
@@ -77,28 +85,33 @@ pub async fn add_game_list(
                         })?;
 
                         let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, 2);
+                        new_timelines.push(new_timeline);
+                    }
 
-                        let _timeline = web::block(move || timelines::insert_new_timeline(new_timeline, &conn))
-                            .await
-                            .map_err(|e| {
-                                eprintln!("{}", e);
-                                HttpResponse::InternalServerError().finish()
-                            })?;
-
-                        let conn = pools.db.get().map_err(|_| {
-                            eprintln!("couldn't get db connection from pools");
+                    let _timelines = web::block(move || timelines::insert_new_timelines(new_timelines, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
                             HttpResponse::InternalServerError().finish()
                         })?;
 
-                        let new_listlog = models::Listlog::new(_timeline.id, list_id.clone());
+                    let mut new_listlogs: Vec<models::Listlog> = Vec::new();
 
-                        let _ = web::block(move || listlogs::insert_new_listlog(new_listlog, &conn))
-                            .await
-                            .map_err(|e| {
-                                eprintln!("{}", e);
-                                HttpResponse::InternalServerError().finish()
-                            })?;
+                    for _tl in _timelines {
+                        new_listlogs.push(models::Listlog::new(_tl.id, list_id.clone()));
                     }
+
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                    let _ = web::block(move || listlogs::insert_new_listlogs(new_listlogs, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
 
                     return Ok(HttpResponse::Created().body("ok"))
                 },
