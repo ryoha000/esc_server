@@ -103,6 +103,18 @@ table! {
 }
 
 table! {
+    messages (id) {
+        id -> Varchar,
+        from_user_id -> Varchar,
+        to_user_id -> Varchar,
+        message -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+        deleted_at -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     reviewlogs (id) {
         id -> Varchar,
         timeline_id -> Varchar,
@@ -190,6 +202,7 @@ allow_tables_to_appear_in_same_query!(
     listlogs,
     listmaps,
     lists,
+    messages,
     reviewlogs,
     reviews,
     timelines,

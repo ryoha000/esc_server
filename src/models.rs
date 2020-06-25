@@ -11,6 +11,7 @@ use crate::schema::listmaps;
 use crate::schema::listlogs;
 use crate::schema::reviews;
 use crate::schema::reviewlogs;
+use crate::schema::messages;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -431,6 +432,34 @@ impl Reviewlog {
             timeline_id: timeline_id,
             review_id: review_id,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[belongs_to(parent = User, foreign_key = "from_user_id")]
+#[belongs_to(parent = User, foreign_key = "to_user_id")]
+#[table_name = "messages"]
+pub struct Message {
+    pub id: String,
+    pub from_user_id: String,
+    pub to_user_id: String,
+    pub message: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
+}
+
+impl Message {
+    pub fn new(from_user_id: String, to_user_id: String, message: String) -> Message {
+        Message {
+            id: Uuid::new_v4().to_string(),
+            from_user_id: from_user_id,
+            to_user_id: to_user_id,
+            message: message,
+            created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+            updated_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+            deleted_at: None,
         }
     }
 }
