@@ -12,6 +12,7 @@ use crate::schema::listlogs;
 use crate::schema::reviews;
 use crate::schema::reviewlogs;
 use crate::schema::messages;
+use crate::schema::randomids;
 use uuid::Uuid;
 
 #[derive(Queryable)]
@@ -468,4 +469,33 @@ impl Message {
             deleted_at: None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[table_name = "randomids"]
+#[belongs_to(User)]
+pub struct Randomid {
+    pub id: String,
+    pub user_id: String,
+    pub purpose: i32, // 0 => through, 1 => timeline, 2 => direct, 3 => name, 4 => play, 5 => review, 6 => list
+}
+
+impl Randomid {
+    pub fn new(user_id: String, purpose: RandomPurpose) -> Randomid {
+        Randomid {
+            id: Uuid::new_v4().to_string(),
+            user_id: user_id,
+            purpose: purpose as i32,
+        }
+    }
+}
+
+pub enum RandomPurpose {
+    Throufh,
+    FTimeline,
+    FDirect,
+    FName,
+    FPlay,
+    FReview,
+    FList,
 }

@@ -115,6 +115,14 @@ table! {
 }
 
 table! {
+    randomids (id) {
+        id -> Varchar,
+        user_id -> Varchar,
+        purpose -> Int4,
+    }
+}
+
+table! {
     reviewlogs (id) {
         id -> Varchar,
         timeline_id -> Varchar,
@@ -188,6 +196,7 @@ joinable!(listlogs -> timelines (timeline_id));
 joinable!(listmaps -> games (game_id));
 joinable!(listmaps -> lists (list_id));
 joinable!(lists -> users (user_id));
+joinable!(randomids -> users (user_id));
 joinable!(reviewlogs -> reviews (review_id));
 joinable!(reviewlogs -> timelines (timeline_id));
 joinable!(reviews -> games (game_id));
@@ -203,6 +212,7 @@ allow_tables_to_appear_in_same_query!(
     listmaps,
     lists,
     messages,
+    randomids,
     reviewlogs,
     reviews,
     timelines,
