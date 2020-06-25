@@ -481,11 +481,11 @@ pub struct Randomid {
 }
 
 impl Randomid {
-    pub fn new(user_id: String, purpose: RandomPurpose) -> Randomid {
+    pub fn new(user_id: String, purpose: i32) -> Randomid {
         Randomid {
             id: Uuid::new_v4().to_string(),
             user_id: user_id,
-            purpose: purpose as i32,
+            purpose: purpose,
         }
     }
 }

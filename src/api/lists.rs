@@ -84,7 +84,7 @@ pub async fn get_list(
     })?;
 
     let list_uid: uuid::Uuid = list_id.into_inner().parse().map_err(|_| {
-        eprintln!("couldn't get redis connection from pools");
+        eprintln!("couldn't parse id to uuid");
         HttpResponse::InternalServerError().finish()
     })?;
     
