@@ -199,7 +199,7 @@ pub async fn add_recent_reviews(
     let mut new_timelines: Vec<models::Timeline> = Vec::new();
     let mut new_reviewlogs: Vec<models::Reviewlog> = Vec::new();
     for cr in &reviews {
-        let _timeline = models::Timeline::new(cr.user_id.clone(), cr.game_id, 2);
+        let _timeline = models::Timeline::new(cr.user_id.clone(), cr.game_id, models::LogType::Review as i32);
         new_reviewlogs.push(models::Reviewlog::new(_timeline.id.clone(), cr.id.clone()));
         new_timelines.push(_timeline);
     }

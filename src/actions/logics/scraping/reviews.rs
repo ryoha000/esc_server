@@ -46,6 +46,20 @@ pub async fn get_recent_reviews(max_id: i32) -> Result<Vec<models::Review>> {
     Ok(_reviews)
 }
 
+pub async fn get_reviews_by_es_user_id(user_id: String) -> Result<Vec<models::Review>> {
+    let mut _reviews: Vec<models::Review> = Vec::new();
+    let query = format!("WHERE uid = '{}'", user_id);
+    let fragment = execute_on_es(make_query(query)).await.unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+    for tr in fragment.select(&tr_selector) {
+        let mut _review = models::Review::get_review_from_row(tr);
+        if check_game(&_review.game_id) {
+            _reviews.push(_review);
+        }
+    }
+    Ok(_reviews)
+}
+
 fn make_query(where_query: String) -> String {
     format!("{}{}", r"
 SELECT

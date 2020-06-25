@@ -1,7 +1,9 @@
 use actix_web::{web, Error, HttpResponse, http};
 use serde::{Deserialize, Serialize};
 use super::super::actions::users;
+use super::super::actions::reviews;
 use super::super::actions::logics::{hash::make_hashed_string, es_login};
+use super::super::actions::logics::scraping;
 use super::super::models;
 use std::ops::DerefMut;
 use uuid::Uuid;
@@ -110,6 +112,26 @@ pub async fn signup(
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
                 })?;
+
+            let insert_reviews = scraping::reviews::get_reviews_by_es_user_id(form.name.clone())
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            let _reviews = web::block(move || reviews::insert_new_reviews(insert_reviews, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+            })?;
+            
             res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
         }
 
