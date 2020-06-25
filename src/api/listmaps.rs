@@ -84,7 +84,7 @@ pub async fn add_game_list(
                             HttpResponse::InternalServerError().finish()
                         })?;
 
-                        let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, 2);
+                        let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, models::LogType::List as i32);
                         new_timelines.push(new_timeline);
                     }
 

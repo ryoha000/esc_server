@@ -9,3 +9,4 @@ pub mod listmaps;
 pub mod listlogs;
 pub mod reviews;
 pub mod reviewlogs;
+pub mod messages;

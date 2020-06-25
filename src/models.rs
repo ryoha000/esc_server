@@ -203,6 +203,12 @@ impl Timeline {
     }
 }
 
+pub enum LogType {
+    Play,
+    Review,
+    List,
+}
+
 #[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
 #[belongs_to(parent = User, foreign_key = "followee_id")]
 #[belongs_to(parent = User, foreign_key = "follower_id")]

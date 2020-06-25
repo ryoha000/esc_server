@@ -1,6 +1,7 @@
 use actix_web::{web, Error, HttpResponse};
 use std::ops::DerefMut;
 use super::super::middleware;
+use super::super::models;
 use super::super::actions::timelines;
 
 pub async fn post_play(
@@ -32,7 +33,7 @@ pub async fn post_play(
         })?;
     }
 
-    let new_timeline = super::super::models::Timeline::new(user_id, game_id.into_inner(), 0);
+    let new_timeline = models::Timeline::new(user_id, game_id.into_inner(), models::LogType::Play as i32);
     // use web::block to offload blocking Diesel code without blocking server thread
     let _timeline = web::block(move || timelines::insert_new_timeline(new_timeline, &conn))
         .await
