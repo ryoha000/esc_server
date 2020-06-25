@@ -1,7 +1,9 @@
 use actix_web::{web, Error, HttpResponse};
 use std::ops::DerefMut;
 use super::super::middleware;
+use super::super::models;
 use super::super::actions::follows;
+use super::super::actions::randomids;
 
 pub async fn post_follows(
     auth: middleware::Authorized,
@@ -30,7 +32,18 @@ pub async fn post_follows(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let new_follows = super::super::models::Follow::new(followee_id.into_inner(), follower_id);
+        let mut followee: models::User;
+        match web::block(move || randomids::get_user_by_id(followee_id.into_inner(), &conn)).await {
+            Ok(user) => followee = user,
+            _ => return Ok(HttpResponse::NotFound().body("user not found"))
+        }
+
+        let conn = pools.db.get().map_err(|_| {
+            eprintln!("couldn't get db connection from pools");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+        let new_follows = super::super::models::Follow::new(followee.id, follower_id);
         // use web::block to offload blocking Diesel code without blocking server thread
         let _follows = web::block(move || follows::insert_new_follow(new_follows, &conn))
             .await

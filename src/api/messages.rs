@@ -1,7 +1,9 @@
-use actix_web::{web, Error, HttpResponse};
+use actix_web::{web, Error, HttpResponse, http};
 use std::ops::DerefMut;
 use super::super::middleware;
+use super::super::models;
 use super::super::actions::messages;
+use super::super::actions::randomids;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +30,8 @@ pub async fn post_messages(
 
     println!("{:?}", auth.session_id);
     if let Some(session_id) = auth.session_id {
-        println!("{}", session_id);
+        let mut res = HttpResponse::new(http::StatusCode::OK);
+        
         let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()
@@ -38,7 +41,18 @@ pub async fn post_messages(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let new_messages = super::super::models::Message::new(from_user_id, to_user_id.into_inner(), form.message.clone());
+        let mut to_user: models::User;
+        match web::block(move || randomids::get_user_by_id(to_user_id.into_inner(), &conn)).await {
+            Ok(user) => to_user = user,
+            _ => return Ok(HttpResponse::NotFound().body("user not found"))
+        }
+
+        let conn = pools.db.get().map_err(|_| {
+            eprintln!("couldn't get db connection from pools");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+        let new_messages = super::super::models::Message::new(from_user_id, to_user.id, form.message.clone());
         // use web::block to offload blocking Diesel code without blocking server thread
         let _messages = web::block(move || messages::insert_new_message(new_messages, &conn))
             .await

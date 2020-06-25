@@ -5,13 +5,13 @@ use super::super::models;
 
 /// Run query using Diesel to insert a new database row and return the result.
 pub fn find_user_by_uid(
-    uid: Uuid,
+    id: String,
     conn: &PgConnection,
 ) -> Result<Option<models::User>, diesel::result::Error> {
     use crate::schema::users::dsl::*;
 
     let user = users
-        .filter(id.eq(uid.to_string()))
+        .filter(id.eq(id))
         .first::<models::User>(conn)
         .optional()?;
 
@@ -55,9 +55,15 @@ pub fn insert_new_user(
     // modules inside a function's scope (rather than the normal module's scope)
     // to prevent import collisions and namespace pollution.
     use crate::schema::users::dsl::*;
+    use crate::schema::randomids::dsl::*;
 
     diesel::insert_into(users).values(&new_user).execute(conn)?;
 
+    let mut new_randomids: Vec<models::Randomid> = Vec::new();
+    for i in 0..7 {
+        new_randomids.push(models::Randomid::new(new_user.id.clone(), i));
+    }
+    diesel::insert_into(randomids).values(&new_randomids).execute(conn)?;
     Ok(new_user)
 }
 

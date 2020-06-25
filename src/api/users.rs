@@ -1,6 +1,7 @@
 use actix_web::{web, Error, HttpResponse, http};
 use serde::{Deserialize, Serialize};
 use super::super::actions::users;
+use super::super::actions::randomids;
 use super::super::actions::reviews;
 use super::super::actions::logics::{hash::make_hashed_string, es_login};
 use super::super::actions::logics::scraping;
@@ -23,7 +24,7 @@ pub struct PostLogin {
 
 pub async fn get_user(
     pools: web::Data<super::super::Pools>,
-    user_uid: web::Path<Uuid>,
+    user_uid: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let user_uid = user_uid.into_inner();
     let conn = pools.db.get().map_err(|_| {
@@ -31,8 +32,19 @@ pub async fn get_user(
         HttpResponse::InternalServerError().finish()
     })?;
 
+    let mut search_user: models::User;
+    match web::block(move || randomids::get_user_by_id(user_uid, &conn)).await {
+        Ok(user) => search_user = user,
+        _ => return Ok(HttpResponse::NotFound().body("user not found"))
+    }
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
     // use web::block to offload blocking Diesel code without blocking server thread
-    let user = web::block(move || users::find_user_by_uid(user_uid, &conn))
+    let user = web::block(move || users::find_user_by_uid(search_user.id, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -43,7 +55,7 @@ pub async fn get_user(
         Ok(HttpResponse::Ok().json(user))
     } else {
         let res = HttpResponse::NotFound()
-            .body(format!("No user found with uid: {}", user_uid));
+            .body("No user found");
         Ok(res)
     }
 }
@@ -131,7 +143,7 @@ pub async fn signup(
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
             })?;
-            
+
             res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
         }
 
