@@ -1,7 +1,6 @@
 use scraper::{Html, Selector};
 use super::super::super::super::models;
 extern crate reqwest;
-use rand::Rng;
 use super::scraping_shared::*;
 use anyhow::{Context, Result};
 use std::io::Error;

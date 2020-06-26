@@ -54,15 +54,15 @@ pub fn insert_new_randomids(
 }
 
 pub fn get_randomid_by_user_id (
-    user_id: String,
-    purpose: i32,
+    search_user_id: String,
+    search_purpose: i32,
     conn: &PgConnection,
 ) -> Result<models::Randomid, diesel::result::Error> {
     use crate::schema::randomids::dsl::*;
 
     let randomid = randomids
-        .filter(user_id.eq(user_id))
-        .filter(purpose.eq(purpose))
+        .filter(user_id.eq(search_user_id))
+        .filter(purpose.eq(search_purpose))
         .first::<models::Randomid>(conn)?;
 
     Ok(randomid)

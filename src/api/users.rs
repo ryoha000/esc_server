@@ -7,7 +7,6 @@ use super::super::actions::logics::{hash::make_hashed_string, es_login};
 use super::super::actions::logics::scraping;
 use super::super::models;
 use std::ops::DerefMut;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewUser {
@@ -32,7 +31,7 @@ pub async fn get_user(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let mut search_user: models::User;
+    let search_user: models::User;
     match web::block(move || randomids::get_user_by_id(user_uid, &conn)).await {
         Ok(user) => search_user = user,
         _ => return Ok(HttpResponse::NotFound().body("user not found"))

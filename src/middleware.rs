@@ -1,8 +1,7 @@
 use actix_web::{Error, HttpRequest, FromRequest};
 use actix_web::dev::Payload;
 use futures::future::{ok, Ready};
-use anyhow::{Context, Result};
-use super::models;
+use anyhow::{Result};
 use std::ops::DerefMut;
 
 pub struct Authorized {
