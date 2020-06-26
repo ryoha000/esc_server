@@ -63,3 +63,16 @@ pub fn find_followees_by_uid(
 
     Ok(followees)
 }
+
+pub fn delete_follow(
+    follow_id: uuid::Uuid,
+    conn: &PgConnection,
+) -> Result<Vec<models::Follow>, diesel::result::Error> {
+    use crate::schema::follows::dsl::*;
+
+    let deleted_follow = diesel::update(follows.filter(id.eq(follow_id.to_string())))
+        .set(deleted_at.eq(chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0)))
+        .load(conn)?;
+
+    Ok(deleted_follow)
+}
