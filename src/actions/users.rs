@@ -1,6 +1,4 @@
 use diesel::prelude::*;
-use uuid::Uuid;
-
 use super::super::models;
 
 /// Run query using Diesel to insert a new database row and return the result.

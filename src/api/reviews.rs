@@ -10,17 +10,14 @@ pub async fn get_review(
     pools: web::Data<super::super::Pools>,
     review_id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
+    let review_id: String = review_id.into_inner();
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
-    let review_id: uuid::Uuid = review_id.into_inner().parse().map_err(|e| {
-        eprintln!("{}", e);
-        HttpResponse::InternalServerError().finish()
-    })?;
 
     // use web::block to offload blocking Diesel code without blocking server thread
-    let review = web::block(move || reviews::find_review_by_uid(review_id, &conn))
+    let review = web::block(move || reviews::find_review_by_id(review_id, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -31,7 +28,7 @@ pub async fn get_review(
         Ok(HttpResponse::Ok().json(review))
     } else {
         let res = HttpResponse::NotFound()
-            .body(format!("No review found with uid: {}", review_id));
+            .body("No review");
         Ok(res)
     }
 }

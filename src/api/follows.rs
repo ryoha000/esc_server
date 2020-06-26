@@ -72,12 +72,8 @@ pub async fn get_followers(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let user_uid: uuid::Uuid = user_id.parse().map_err(|_| {
-        eprintln!("couldn't user_id to uuid");
-        HttpResponse::InternalServerError().finish()
-    })?;
     // use web::block to offload blocking Diesel code without blocking server thread
-    let _follows = web::block(move || follows::find_followers_by_uid(user_uid, &conn))
+    let _follows = web::block(move || follows::find_followers_by_uid(user_id.into_inner(), &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);

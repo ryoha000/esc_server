@@ -42,11 +42,11 @@ pub fn insert_new_follow(
 
 // そのUserがフォローされてる相手を取得
 pub fn find_followers_by_uid(
-    uid: Uuid,
+    follower_id: String,
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::User>>, diesel::result::Error> {
     // TODO: ちゃんとdieselでかく
-    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.follower_id = users.id WHERE follows.allowed = true AND follows.followee_id = \'{}\';", uid.to_string());
+    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.follower_id = users.id WHERE follows.allowed = true AND follows.followee_id = \'{}\';", follower_id);
     let followers = diesel::sql_query(query).load(conn).optional()?;
 
     Ok(followers)
@@ -54,11 +54,11 @@ pub fn find_followers_by_uid(
 
 // そのUserがフォローしてる相手を取得
 pub fn find_followees_by_uid(
-    uid: Uuid,
+    followee_id: String,
     conn: &PgConnection,
 ) -> Result<Vec<models::User>, diesel::result::Error> {
     // TODO: ちゃんとdieselでかく
-    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.followee_id = users.id WHERE follows.allowed = true AND follows.follower_id = \'{}\';", uid.to_string());
+    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.followee_id = users.id WHERE follows.allowed = true AND follows.follower_id = \'{}\';", followee_id);
     let followees = diesel::sql_query(query).load(conn)?;
 
     Ok(followees)

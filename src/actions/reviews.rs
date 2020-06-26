@@ -1,17 +1,16 @@
 use diesel::prelude::*;
-use uuid::Uuid;
 
 use super::super::models;
 
 /// Run query using Diesel to insert a new database row and return the result.
-pub fn find_review_by_uid(
-    uid: Uuid,
+pub fn find_review_by_id(
+    id: String,
     conn: &PgConnection,
 ) -> Result<Option<models::Review>, diesel::result::Error> {
     use crate::schema::reviews::dsl::*;
 
     let review = reviews
-        .filter(id.eq(uid.to_string()))
+        .filter(id.eq(id))
         .first::<models::Review>(conn)
         .optional()?;
 

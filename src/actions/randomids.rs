@@ -57,14 +57,13 @@ pub fn get_randomid_by_user_id (
     user_id: String,
     purpose: i32,
     conn: &PgConnection,
-) -> Result<Option<models::Randomid>, diesel::result::Error> {
+) -> Result<models::Randomid, diesel::result::Error> {
     use crate::schema::randomids::dsl::*;
 
     let randomid = randomids
         .filter(user_id.eq(user_id))
         .filter(purpose.eq(purpose))
-        .first::<models::Randomid>(conn)
-        .optional()?;
+        .first::<models::Randomid>(conn)?;
 
     Ok(randomid)
 }
