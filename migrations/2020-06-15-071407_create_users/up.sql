@@ -8,5 +8,6 @@ CREATE TABLE users (
   show_detail_all_users BOOLEAN DEFAULT FALSE,
   show_followers BOOLEAN DEFAULT TRUE,
   show_followers_okazu BOOLEAN DEFAULT FALSE,
-  twitter_id VARCHAR
+  twitter_id VARCHAR,
+  icon_url TEXT
 )
