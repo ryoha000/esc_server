@@ -51,3 +51,19 @@ pub fn insert_new_reviewlogs(
 
     Ok(new_reviewlogs)
 }
+
+pub fn find_review_by_timeline_id(
+    search_timeline_id: String,
+    conn: &PgConnection,
+) -> Result<Option<(models::Reviewlog, models::Review)>, diesel::result::Error> {
+    use crate::schema::reviewlogs::dsl::*;
+    use crate::schema::reviews::dsl::*;
+
+    let reviewlog = reviewlogs
+        .inner_join(reviews)
+        .filter(timeline_id.eq(search_timeline_id))
+        .first::<(models::Reviewlog, models::Review)>(conn)
+        .optional()?;
+
+    Ok(reviewlog)
+}
