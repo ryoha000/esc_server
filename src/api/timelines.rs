@@ -1,5 +1,4 @@
 use actix_web::{web, Error, HttpResponse};
-use uuid::Uuid;
 use super::super::actions::timelines;
 use super::super::models;
 use serde::{Serialize};
@@ -7,9 +6,10 @@ use serde::{Serialize};
 #[derive(Debug, Clone, Serialize)]
 pub struct MaskedTimeline {
     pub timeline: models::Timeline,
-    pub review_log_id: Uuid,
-    pub list_log_id: Uuid,
-    pub session_id: Uuid,
+    pub review: Option<models::Review>,
+    pub list: Option<models::List>,
+    pub game: models::Game,
+    pub user: models::User,
 }
 
 pub async fn get_timelines(

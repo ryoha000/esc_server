@@ -51,6 +51,19 @@ impl User {
             twitter_id: None,
         }
     }
+    pub fn annonymus(randomid: String, es_user_id: String) -> User {
+        User {
+            id: randomid,
+            es_user_id: es_user_id,
+            display_name: String::from("名無しさん"),
+            comment: None,
+            show_all_users: Some(true),
+            show_detail_all_users: Some(false),
+            show_followers: Some(true),
+            show_followers_okazu: Some(false),
+            twitter_id: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Queryable, Insertable)]
@@ -421,7 +434,7 @@ impl Review {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName, PartialEq)]
 #[table_name = "reviewlogs"]
 #[belongs_to(Review)]
 #[belongs_to(Timeline)]
