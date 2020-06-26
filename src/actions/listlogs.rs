@@ -57,3 +57,19 @@ pub fn insert_new_listlogs(
 
     Ok(new_listlogs)
 }
+
+pub fn find_list_by_timeline_id(
+    search_timeline_id: String,
+    conn: &PgConnection,
+) -> Result<Option<(models::Listlog, models::List)>, diesel::result::Error> {
+    use crate::schema::listlogs::dsl::*;
+    use crate::schema::lists::dsl::*;
+
+    let res = listlogs
+        .inner_join(lists)
+        .filter(timeline_id.eq(search_timeline_id))
+        .first::<(models::Listlog, models::List)>(conn)
+        .optional()?;
+
+    Ok(res)
+}

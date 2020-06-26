@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 use super::super::models;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ListWithGames {

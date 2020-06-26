@@ -50,3 +50,19 @@ pub fn insert_new_timelines(
 
     Ok(new_timelines)
 }
+
+pub fn find_timeline_with_game_by_timeline_id(
+    search_timeline_id: String,
+    conn: &PgConnection,
+) -> Result<Option<(models::Timeline, models::Game)>, diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+    use crate::schema::timelines::dsl::*;
+
+    let res = timelines
+        .inner_join(games)
+        .filter(crate::schema::timelines::id.eq(search_timeline_id))
+        .first::<(models::Timeline, models::Game)>(conn)
+        .optional()?;
+
+    Ok(res)
+}
