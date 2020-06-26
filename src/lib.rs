@@ -62,8 +62,29 @@ pub async fn db_setup(pools: &Pools) {
     new_user.id = String::from("");
     new_user.es_user_id = String::from("批評空間のユーザー");
     new_user.display_name = String::from("批評空間のユーザー");
-    let user = web::block(move || actions::users::insert_new_user(new_user, &conn))
+    let _ = web::block(move || actions::users::insert_new_user(new_user, &conn))
         .await
         .unwrap();
-    println!("{:?}", user)
+
+    // 今ある全てのゲームを取得
+    let new_games = actions::logics::scraping::games::get_all_games()
+        .await
+        .unwrap();
+
+    let conn = pools.db.get().unwrap();
+
+    let _ = web::block(move || actions::games::insert_new_games(new_games, &conn))
+        .await
+        .unwrap();
+
+    // 今ある全てのブランドを取得
+    let new_brands = actions::logics::scraping::brands::get_all_brands()
+        .await
+        .unwrap();
+
+    let conn = pools.db.get().unwrap();
+
+    let _ = web::block(move || actions::brands::insert_new_brands(new_brands, &conn))
+        .await
+        .unwrap();
 }
