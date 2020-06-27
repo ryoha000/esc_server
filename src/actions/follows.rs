@@ -76,3 +76,25 @@ pub fn delete_follow(
 
     Ok(deleted_follow)
 }
+
+pub fn approve_follow(
+    follow_id: uuid::Uuid,
+    conn: &PgConnection,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::follows::dsl::*;
+
+    let approve_follows: Vec<models::Follow> = diesel::update(follows.filter(id.eq(follow_id.to_string())))
+        .set(allowed.eq(true))
+        .load(conn)?;
+
+    if approve_follows.len() > 0 {
+        let approve_follow = &approve_follows[0];
+        if approve_follow.mutual {
+            let mut follow_back = models::Follow::new(approve_follow.follower_id.clone(), approve_follow.followee_id.clone());
+            follow_back.mutual = true;
+            follow_back.allowed = true;
+            let follow_back = insert_new_follow(follow_back, conn)?;
+        }
+    }
+    Ok(())
+}

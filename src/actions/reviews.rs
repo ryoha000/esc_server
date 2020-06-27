@@ -4,13 +4,13 @@ use super::super::models;
 
 /// Run query using Diesel to insert a new database row and return the result.
 pub fn find_review_by_id(
-    id: String,
+    review_id: String,
     conn: &PgConnection,
 ) -> Result<Option<models::Review>, diesel::result::Error> {
     use crate::schema::reviews::dsl::*;
 
     let review = reviews
-        .filter(id.eq(id))
+        .filter(id.eq(review_id))
         .first::<models::Review>(conn)
         .optional()?;
 

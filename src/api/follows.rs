@@ -82,3 +82,77 @@ pub async fn get_followers(
 
     Ok(HttpResponse::Ok().json(_follows))
 }
+
+pub struct Approval {
+    pub approve: bool
+}
+
+pub async fn handle_follow_request(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    approval: web::Query<Approval>,
+    follow_id: web::Path<uuid::Uuid>,
+) -> Result<HttpResponse, Error> {
+    let follow_id = follow_id.into_inner();
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            // フォローリクエストの取得
+            let option_follow_request = web::block(move || follows::find_follow_by_uid(follow_id.clone(), &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            let follow_request: models::Follow;
+            if let Some(fr) = option_follow_request {
+                follow_request = fr;
+                // もし申請元じゃないのにリクエスト飛ばしてたら弾く
+                if follow_request.follower_id != me.user_id {
+                    return Ok(HttpResponse::Forbidden().body("this method is not permitted"))
+                }
+            } else {
+                return Ok(HttpResponse::NotFound().body("follow request is not found"))
+            }
+
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            match approval.approve {
+                true => {
+                    let _ = web::block(move || follows::approve_follow(follow_id, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+                    return Ok(HttpResponse::Ok().body("accept follow"))
+                },
+                false => {
+                    let deleted_follow = web::block(move || follows::delete_follow(follow_id, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+                    return Ok(HttpResponse::Ok().json(deleted_follow))
+                }
+            }
+        },
+        _ => {
+            return Ok(HttpResponse::Unauthorized().body("Please login"))
+        }
+    }
+}
