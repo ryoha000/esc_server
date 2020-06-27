@@ -1,7 +1,6 @@
 use diesel::prelude::*;
 use super::super::models;
 
-/// Run query using Diesel to insert a new database row and return the result.
 pub fn find_user_by_uid(
     user_id: String,
     conn: &PgConnection,
@@ -16,7 +15,6 @@ pub fn find_user_by_uid(
     Ok(user)
 }
 
-/// Run query using Diesel to insert a new database row and return the result.
 pub fn find_user_by_name(
     search_name: String,
     conn: &PgConnection,
@@ -59,7 +57,7 @@ pub fn insert_new_user(
         user_id: new_user.id.clone(),
         purpose: models::RandomPurpose::Throufh as i32,
     });
-    for i in 1..7 {
+    for i in 1..8 {
         new_randomids.push(models::Randomid::new(new_user.id.clone(), i));
     }
     diesel::insert_into(randomids).values(&new_randomids).execute(conn)?;

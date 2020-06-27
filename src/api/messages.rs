@@ -41,7 +41,7 @@ pub async fn post_messages(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let mut to_user: models::User;
+        let to_user: models::User;
         match web::block(move || randomids::get_user_by_id(to_user_id.into_inner(), &conn)).await {
             Ok(user) => to_user = user,
             _ => return Ok(HttpResponse::NotFound().body("user not found"))

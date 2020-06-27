@@ -511,4 +511,5 @@ pub enum RandomPurpose {
     FPlay,
     FReview,
     FList,
+    FFollow,
 }
