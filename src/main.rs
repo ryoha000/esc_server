@@ -74,6 +74,9 @@ async fn main() -> std::io::Result<()> {
             .route("/reviews", web::get().to(api::reviews::get_reviews))
 
             .route("/messages", web::get().to(api::messages::get_messages))
+
+            .route("/follows", web::get().to(api::follows::get_follow_request))
+            .route("/follows/{follow_id}", web::post().to(api::follows::handle_follow_request))
     })
     .bind("127.0.0.1:8088")?
     .run()

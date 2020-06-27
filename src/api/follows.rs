@@ -22,17 +22,12 @@ pub async fn post_follows(
 
     println!("{:?}", auth.session_id);
     if let Some(session_id) = auth.session_id {
-        println!("{}", session_id);
-        let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
-            eprintln!("{:?}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
         let follower_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let mut followee: models::User;
+        let followee: models::User;
         match web::block(move || randomids::get_user_by_id(followee_id.into_inner(), &conn)).await {
             Ok(user) => followee = user,
             _ => return Ok(HttpResponse::NotFound().body("user not found"))
@@ -67,7 +62,7 @@ pub async fn get_followers(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let mut redis_conn = pools.redis.get().map_err(|_| {
+    let redis_conn = pools.redis.get().map_err(|_| {
         eprintln!("couldn't get redis connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
@@ -83,6 +78,40 @@ pub async fn get_followers(
     Ok(HttpResponse::Ok().json(_follows))
 }
 
+pub async fn get_follow_request(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            // フォローリクエストの取得
+            let follow_requests = web::block(move || follows::get_unapprove_follows_follower_id(me.user_id, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            Ok(HttpResponse::Ok().json(follow_requests))
+        },
+        _ => {
+            return Ok(HttpResponse::Unauthorized().body("Please login"))
+        }
+    }
+}
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approval {
     pub approve: bool
 }
@@ -90,8 +119,8 @@ pub struct Approval {
 pub async fn handle_follow_request(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
-    approval: web::Query<Approval>,
     follow_id: web::Path<uuid::Uuid>,
+    approval: web::Json<Approval>,
 ) -> Result<HttpResponse, Error> {
     let follow_id = follow_id.into_inner();
     let conn = pools.db.get().map_err(|_| {

@@ -42,11 +42,11 @@ pub fn insert_new_follow(
 
 // そのUserがフォローされてる相手を取得
 pub fn find_followers_by_uid(
-    follower_id: String,
+    search_follower_id: String,
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::User>>, diesel::result::Error> {
     // TODO: ちゃんとdieselでかく
-    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.follower_id = users.id WHERE follows.allowed = true AND follows.followee_id = \'{}\';", follower_id);
+    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join follows on follows.follower_id = users.id WHERE follows.allowed = true AND follows.follower_id = \'{}\';", search_follower_id);
     let followers = diesel::sql_query(query).load(conn).optional()?;
 
     Ok(followers)
@@ -97,4 +97,23 @@ pub fn approve_follow(
         }
     }
     Ok(())
+}
+
+pub fn get_unapprove_follows_follower_id(
+    follower_user_id: String,
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::Follow>>, diesel::result::Error> {
+    use crate::schema::follows::dsl::*;
+    let search_deleted_at: Option<chrono::NaiveDateTime> = None;
+
+    println!("{:?}", follower_user_id);
+    let follow_requests = follows
+        .filter(follower_id.eq(follower_user_id)
+            .and(allowed.eq(false))
+            .and(deleted_at.is_not_distinct_from(search_deleted_at)))
+        .load::<models::Follow>(conn)
+        .optional()?;
+
+    println!("{:?}", follow_requests);
+    Ok(follow_requests)
 }
