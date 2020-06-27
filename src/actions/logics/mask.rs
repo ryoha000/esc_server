@@ -7,6 +7,45 @@ use super::super::super::actions;
 use diesel::prelude::*;
 use anyhow::{Context, Result};
 
+// pub fn mask_timelines(
+//     auth: middleware::Authorized,
+//     timelines: Vec<models::Timeline>,
+//     redis_pool: RedisPool,
+//     conn: &PgConnection,
+// ) -> Result<Vec<timelines::MaskedTimeline>> {
+//     let mut redis_conn = redis_pool.get().context("couldn't get db connection from pools")?;
+
+//     let followees = actions::follows::find_followees_by_uid(user_id, conn)?;
+//     let mut new_timelines: Vec<timelines::MaskedTimeline> = Vec::new();
+
+//     for _tl in timelines {
+//         let mut new_tl = _tl;
+
+//         let mut is_follow = false;
+//         for flee in &followees {
+//             if new_tl.user_id == flee.id {
+//                 is_follow = true;
+//             }
+//         }
+
+//         if !is_follow {
+//             new_tl.user_id = String::from("");
+//         }
+        
+//         let mut _review: Option<models::Review> = None;
+//         match new_tl.log_type {
+//             // Play => 0, Review => 1, List = 2
+//             0 => 
+//         }
+//         // new_timelines.push(
+//         //     timelines::MaskedTimeline {
+//         //         timeline: new_tl
+//         //     }
+//         // );
+//     }
+//     Ok(new_timelines)
+// }
+
 pub fn mask_timeline(
     auth: middleware::Authorized,
     timeline_id: String,
@@ -85,4 +124,19 @@ pub fn mask_timeline(
             anyhow::bail!("somethin went wrong")
         }
     }
+}
+
+pub fn mask_users(
+    input_users: Vec<models::User>,
+    purpose: models::RandomPurpose,
+    conn: &PgConnection,
+) -> Result<Vec<models::User>> {
+    let mut user_ids: Vec<String> = Vec::new();
+    for new_user in &input_users {
+        user_ids.push(new_user.id.clone());
+    }
+    let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
+
+    println!("{:?}", get_random_ids);
+    Ok(get_random_ids)
 }

@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use super::super::models;
 
-/// Run query using Diesel to insert a new database row and return the result.
 pub fn find_randomid_by_uid(
     uid: Uuid,
     conn: &PgConnection,
@@ -79,4 +78,24 @@ pub fn get_user_by_id (
         Some(user) => Ok(user.clone()),
         None => Err(diesel::result::Error::NotFound)
     }
+}
+
+pub fn get_randomids_by_user_ids (
+    search_user_ids: Vec<String>,
+    search_purpose: i32,
+    conn: &PgConnection,
+) -> Result<Vec<models::User>, diesel::result::Error> {
+    let mut where_query = String::new();
+    let _len = search_user_ids.len();
+    for (i, id) in search_user_ids.iter().enumerate() {
+        match i {
+            _len => where_query.push_str(&(format!("user_id = \'{}\'", id))),
+            _ => where_query.push_str(&(format!("user_id = \'{}\' OR ", id)))
+        }
+    }
+    println!("{}", where_query);
+    let query = format!("SELECT randomids.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE purpose = {} AND ( {} );", search_purpose, where_query);
+    println!("{}", query);
+    let ids: Vec<models::User> = diesel::sql_query(query).load(conn)?;
+    Ok(ids)
 }
