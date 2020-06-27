@@ -1,13 +1,8 @@
-use scraper::{Html, Selector};
+use scraper::{Selector};
 use super::super::super::super::models;
 extern crate reqwest;
 use super::scraping_shared::*;
-use anyhow::{Context, Result};
-use std::io::Error;
-
-use tokio::time::delay_for;
-
-use std::time::Duration;
+use anyhow::{Result};
 
 const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
 

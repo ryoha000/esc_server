@@ -1,4 +1,4 @@
-use actix_web::{web, Error, HttpResponse, http};
+use actix_web::{web, Error, HttpResponse};
 use std::ops::DerefMut;
 use super::super::middleware;
 use super::super::models;
@@ -30,12 +30,6 @@ pub async fn post_messages(
 
     println!("{:?}", auth.session_id);
     if let Some(session_id) = auth.session_id {
-        let mut res = HttpResponse::new(http::StatusCode::OK);
-        
-        let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
-            eprintln!("{:?}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
         let from_user_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()
@@ -82,13 +76,7 @@ pub async fn get_messages(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    println!("{:?}", auth.session_id);
     if let Some(session_id) = auth.session_id {
-        println!("{}", session_id);
-        let header: String = r2d2_redis::redis::cmd("GET").arg(&format!("session_header:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
-            eprintln!("{:?}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
         let user_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
             eprintln!("{:?}", e);
             HttpResponse::InternalServerError().finish()

@@ -59,6 +59,8 @@ pub async fn get_followers(
     pools: web::Data<super::super::Pools>,
     user_id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
+    let user_id = user_id.into_inner();
+    let user_id_str = user_id.clone();
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -70,7 +72,7 @@ pub async fn get_followers(
     })?;
 
     if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
-        let _follows = web::block(move || follows::find_followers_by_uid(user_id.into_inner(), &conn))
+        let _follows = web::block(move || follows::find_followers_by_uid(user_id_str, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
@@ -84,6 +86,9 @@ pub async fn get_followers(
                     println!("{}{}", _f.id, me.user_id);
                     is_follower = true;
                 }
+            }
+            if user_id == me.user_id {
+                is_follower = true;
             }
             if !is_follower { return Ok(HttpResponse::Forbidden().body("you did not follow this user"))}
 

@@ -95,7 +95,7 @@ pub fn approve_follow(
             let mut follow_back = models::Follow::new(approve_follow.follower_id.clone(), approve_follow.followee_id.clone());
             follow_back.mutual = true;
             follow_back.allowed = true;
-            let follow_back = insert_new_follow(follow_back, conn)?;
+            let _ = insert_new_follow(follow_back, conn)?;
         }
     }
     Ok(())
