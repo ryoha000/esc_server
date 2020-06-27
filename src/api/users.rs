@@ -6,6 +6,7 @@ use super::super::actions::reviews;
 use super::super::actions::logics::{hash::make_hashed_string, es_login};
 use super::super::actions::logics::scraping;
 use super::super::models;
+use super::super::middleware;
 use std::ops::DerefMut;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +20,40 @@ pub struct NewUser {
 pub struct PostLogin {
     pub name: String,
     pub password: String,
+}
+
+pub async fn me(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
+        let user = web::block(move || users::find_user_by_uid(me.user_id, &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+    
+        if let Some(user) = user {
+            return Ok(HttpResponse::Ok().json(user))
+        } else {
+            let res = HttpResponse::NotFound()
+                .body("No user found");
+            return Ok(res)
+        }
+    } else {
+        return Ok(HttpResponse::Unauthorized().body("Please login"))
+    }
 }
 
 pub async fn get_user(

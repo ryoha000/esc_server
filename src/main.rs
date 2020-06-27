@@ -39,6 +39,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .route("/", web::get().to(api::hello_world::hello_world))
 
+            .route("/me", web::get().to(api::users::me))
             .route("/users/{user_id}", web::get().to(api::users::get_user))
             .route("/users", web::get().to(api::users::get_users))
             .route("/users", web::post().to(api::users::signup))
