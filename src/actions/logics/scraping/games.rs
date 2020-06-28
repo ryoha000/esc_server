@@ -20,6 +20,64 @@ pub async fn get_all_games() -> Result<Vec<models::Game>> {
     Ok(_games)
 }
 
+pub struct NumData {
+    pub id: i32,
+    pub median: i32,
+    pub stdev: i32,
+    pub count2: i32,
+}
+
+impl NumData {
+    fn new() -> NumData {
+        NumData {
+            id: 0,
+            median: 0,
+            stdev: 0,
+            count2: 0,
+        }
+    }
+    fn get_data_from_row(tr: scraper::element_ref::ElementRef) -> NumData {
+        let mut _data = NumData::new();
+        let td_selector = Selector::parse("td").unwrap();
+    
+        for (i, td) in tr.select(&td_selector).enumerate() {
+            match i as u32 {
+                0 => _data.id = match td.inner_html().parse() {
+                    Ok(b) => b,
+                    _ => 0
+                },
+                1 => _data.median = match td.inner_html().parse() {
+                    Ok(b) => b,
+                    _ => 0
+                },
+                2 => _data.stdev = match td.inner_html().parse() {
+                    Ok(b) => b,
+                    _ => 0
+                },
+                3 => _data.count2 = match td.inner_html().parse() {
+                    Ok(b) => b,
+                    _ => 0
+                },
+                _ => {}
+            }
+        }
+        _data
+    }
+}
+
+pub async fn get_all_data() -> Result<Vec<NumData>> {
+    let fragment = execute_on_es(make_num_data_query(0)).await.unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+    let mut _datas: Vec<NumData> = Vec::new();
+    for tr in fragment.select(&tr_selector) {
+        let mut _data = NumData::get_data_from_row(tr);
+        if _data.id != 0 {
+            _datas.push(_data);
+        }
+    }
+    Ok(_datas)
+}
+
 pub async fn get_latest_game_by_id(id: i32) -> Result<models::Game> {
     let fragment = execute_on_es(make_query(id)).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
@@ -97,6 +155,22 @@ fn make_query(id: i32) -> String {
                 dlsite_rental ,
                 dmm_subsc ,
                 surugaya_1
+            FROM gamelist 
+        " , query_where)
+}
+
+fn make_num_data_query(min_id: i32) -> String {
+    let mut query_where = String::new();
+    match min_id {
+        0 => query_where = String::from(""),
+        _ => query_where = format!("where id > {}", min_id),
+    }
+    format!("{}{}", r"
+            SELECT 
+                id,
+                median,
+                stdev,
+                count2
             FROM gamelist 
         " , query_where)
 }
