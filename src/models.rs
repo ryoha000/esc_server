@@ -35,6 +35,7 @@ pub struct User {
     pub show_followers: Option<bool>,
     pub show_followers_okazu: Option<bool>,
     pub twitter_id: Option<String>,
+    pub icon_url: Option<String>,
 }
 
 impl User {
@@ -49,6 +50,7 @@ impl User {
             show_followers: Some(true),
             show_followers_okazu: Some(false),
             twitter_id: None,
+            icon_url: None,
         }
     }
     pub fn annonymus(randomid: String, es_user_id: String) -> User {
@@ -62,6 +64,7 @@ impl User {
             show_followers: Some(true),
             show_followers_okazu: Some(false),
             twitter_id: None,
+            icon_url: None,
         }
     }
 }

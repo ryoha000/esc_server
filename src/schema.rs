@@ -187,6 +187,7 @@ table! {
         show_followers -> Nullable<Bool>,
         show_followers_okazu -> Nullable<Bool>,
         twitter_id -> Nullable<Varchar>,
+        icon_url -> Nullable<Text>,
     }
 }
 
