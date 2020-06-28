@@ -79,11 +79,6 @@ pub async fn add_game_list(
                     })?;
 
                     for _lm in _listmaps {
-                        let conn = pools.db.get().map_err(|_| {
-                            eprintln!("couldn't get db connection from pools");
-                            HttpResponse::InternalServerError().finish()
-                        })?;
-
                         let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, models::LogType::List as i32);
                         new_timelines.push(new_timeline);
                     }

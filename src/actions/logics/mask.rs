@@ -1,7 +1,6 @@
 use super::super::super::models;
 use super::super::super::middleware;
 use super::super::super::api::timelines;
-use super::super::super::RedisPool;
 use super::super::super::actions;
 
 use diesel::prelude::*;
@@ -31,7 +30,7 @@ use anyhow::{Context, Result};
 //         if !is_follow {
 //             new_tl.user_id = String::from("");
 //         }
-        
+
 //         let mut _review: Option<models::Review> = None;
 //         match new_tl.log_type {
 //             // Play => 0, Review => 1, List = 2
@@ -47,9 +46,8 @@ use anyhow::{Context, Result};
 // }
 
 pub fn mask_timeline(
-    auth: middleware::Authorized,
+    me: Option<middleware::Me>,
     timeline_id: String,
-    redis_pool: RedisPool,
     conn: &PgConnection,
 ) -> Result<timelines::MaskedTimeline> {
     // 返答のためのstructの準備
@@ -62,16 +60,13 @@ pub fn mask_timeline(
         anyhow::bail!("timeline not found")
     }
 
-    // Requestしたユーザーを取得
-    let mut redis_conn = redis_pool.get().context("couldn't get db connection from pools")?;
-    let me = middleware::check_user(auth, &mut redis_conn);
-
     // 匿名化する場合のidを取得
     let random_id = actions::randomids::get_randomid_by_user_id(res_tl.user_id.clone(), models::RandomPurpose::FTimeline as i32, conn)?;
 
     match me {
         Some(_me) => {
-            let followees = actions::follows::find_followees_by_uid(_me.user_id, conn)?;
+            let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
+            let followees = actions::follows::find_followees_by_uid(my_uuid, conn)?;
 
             // action主のfollowerかどうか確認
             let mut is_follow = false;
@@ -89,7 +84,7 @@ pub fn mask_timeline(
                     }
                 },
                 false => {
-                    res_tl.user_id = random_id.id;
+                    res_tl.user_id = random_id.id.clone();
                 }
             }
 
@@ -100,12 +95,20 @@ pub fn mask_timeline(
                 // Play => 0, Review => 1, List = 2
                 1 => {
                     if let Some((_reviewlog, found_review)) = actions::reviewlogs::find_review_by_timeline_id(timeline_id.clone(), conn)? {
-                        _review = Some(found_review);
+                        let mut assign_review = found_review;
+                        if !is_follow {
+                            assign_review.user_id = random_id.id;
+                        }
+                        _review = Some(assign_review);
                     }
                 },
                 2 => {
                     if let Some((_listlog, found_list)) = actions::listlogs::find_list_by_timeline_id(timeline_id, conn)? {
-                        _list = Some(found_list);
+                        let mut assign_list = found_list;
+                        if !is_follow {
+                            assign_list.user_id = random_id.id;
+                        }
+                        _list = Some(assign_list);
                     }
                 },
                 _ => {}
@@ -131,9 +134,10 @@ pub fn mask_users(
     purpose: models::RandomPurpose,
     conn: &PgConnection,
 ) -> Result<Vec<models::User>> {
-    let mut user_ids: Vec<String> = Vec::new();
+    let mut user_ids: Vec<uuid::Uuid> = Vec::new();
     for new_user in &input_users {
-        user_ids.push(new_user.id.clone());
+        let user_uuid: uuid::Uuid = new_user.id.parse().context("please uuid")?;
+        user_ids.push(user_uuid);
     }
     let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
 

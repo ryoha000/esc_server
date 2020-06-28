@@ -58,7 +58,7 @@ pub async fn me(
 
 pub async fn get_user(
     pools: web::Data<super::super::Pools>,
-    user_uid: web::Path<String>,
+    user_uid: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, Error> {
     let user_uid = user_uid.into_inner();
     let conn = pools.db.get().map_err(|_| {

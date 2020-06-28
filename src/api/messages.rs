@@ -15,7 +15,7 @@ pub async fn post_messages(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
     form: web::Json<PostMessage>,
-    to_user_id: web::Path<String>,
+    to_user_id: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, Error> {
     println!("po");
     let conn = pools.db.get().map_err(|_| {

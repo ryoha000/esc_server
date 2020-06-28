@@ -68,10 +68,10 @@ pub fn get_randomid_by_user_id (
 }
 
 pub fn get_user_by_id (
-    id: String,
+    id: uuid::Uuid,
     conn: &PgConnection,
 ) -> Result<models::User, diesel::result::Error> {
-    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE randomids.id = \'{}\';", id);
+    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE randomids.id = \'{}\';", id.to_string());
     let user: Vec<models::User> = diesel::sql_query(query).load(conn)?;
 
     match user.get(0) {
@@ -81,16 +81,17 @@ pub fn get_user_by_id (
 }
 
 pub fn get_randomids_by_user_ids (
-    search_user_ids: Vec<String>,
+    search_user_ids: Vec<uuid::Uuid>,
     search_purpose: i32,
     conn: &PgConnection,
 ) -> Result<Vec<models::User>, diesel::result::Error> {
     let mut where_query = String::new();
     let _len = search_user_ids.len();
     for (i, id) in search_user_ids.iter().enumerate() {
-        match i {
-            _len => where_query.push_str(&(format!("user_id = \'{}\'", id))),
-            _ => where_query.push_str(&(format!("user_id = \'{}\' OR ", id)))
+        if i == _len {
+            where_query.push_str(&(format!("user_id = \'{}\'", id.to_string())))
+        } else {
+            where_query.push_str(&(format!("user_id = \'{}\' OR ", id.to_string())))
         }
     }
     println!("{}", where_query);

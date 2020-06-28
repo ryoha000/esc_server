@@ -5,11 +5,12 @@ use super::super::models;
 use super::super::actions::follows;
 use super::super::actions::randomids;
 use super::super::actions::logics::mask;
+use anyhow::{Context};
 
 pub async fn post_follows(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
-    follower_id: web::Path<String>,
+    follower_id: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, Error> {
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
@@ -60,7 +61,12 @@ pub async fn get_followers(
     user_id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let user_id = user_id.into_inner();
-    let user_id_str = user_id.clone();
+    let user_uuid: uuid::Uuid;
+    match user_id.parse::<uuid::Uuid>() {
+        Ok(u_uuid) => user_uuid = u_uuid,
+        _ => return Ok(HttpResponse::BadRequest().body("please enter a uuid"))
+    }
+
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -72,7 +78,7 @@ pub async fn get_followers(
     })?;
 
     if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
-        let _follows = web::block(move || follows::find_followers_by_uid(user_id_str, &conn))
+        let _follows = web::block(move || follows::find_followers_by_uid(user_uuid, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);

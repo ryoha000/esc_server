@@ -62,6 +62,7 @@ async fn main() -> std::io::Result<()> {
             // for test
             .route("games/{game_id}", web::post().to(api::games::add_id_game))
             
+            .route("/timelines/{timeline_id}", web::get().to(api::timelines::get_timeline))
             .route("/timelines", web::get().to(api::timelines::get_timelines))
 
             .route("/play/{game_id}", web::post().to(api::play::post_play))

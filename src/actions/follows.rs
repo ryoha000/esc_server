@@ -42,7 +42,7 @@ pub fn insert_new_follow(
 
 // そのUserがフォローされてる相手を取得
 pub fn find_followers_by_uid(
-    search_follower_id: String,
+    search_follower_id: uuid::Uuid,
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::User>>, diesel::result::Error> {
     // TODO: ちゃんとdieselでかく
@@ -56,7 +56,7 @@ pub fn find_followers_by_uid(
 
 // そのUserがフォローしてる相手を取得
 pub fn find_followees_by_uid(
-    followee_id: String,
+    followee_id: uuid::Uuid,
     conn: &PgConnection,
 ) -> Result<Vec<models::User>, diesel::result::Error> {
     // TODO: ちゃんとdieselでかく
