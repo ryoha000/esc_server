@@ -89,6 +89,20 @@ pub async fn get_latest_game_by_id(id: i32) -> Result<models::Game> {
     Ok(_game)
 }
 
+pub async fn get_latest_games_by_id(id: i32) -> Result<Vec<models::Game>> {
+    let fragment = execute_on_es(make_range_query(id)).await.unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+
+    let mut _games: Vec<models::Game> = Vec::new();
+    for tr in fragment.select(&tr_selector) {
+        let mut _game = models::Game::get_game_from_row(tr);
+        if check_game(&_game) {
+            _games.push(_game);
+        }
+    }
+    Ok(_games)
+}
+
 pub async fn get_test_game(header: reqwest::header::HeaderMap) -> models::Game {
     let client = reqwest::Client::builder()
         .default_headers(header)
@@ -121,6 +135,49 @@ fn make_query(id: i32) -> String {
     match id {
         0 => query_where = String::from(""),
         _ => query_where = format!("where id = '{}'", id),
+    }
+    format!("{}{}", r"
+            SELECT 
+                id,
+                gamename ,
+                furigana ,
+                sellday,
+                brandname ,
+                comike	,
+                shoukai	,
+                model	,
+                erogame	,
+                banner_url	,
+                gyutto_id	,
+                dmm	,
+                dmm_genre	,
+                dmm_genre_2	,
+                erogametokuten ,
+                total_play_time_median ,	
+                time_before_understanding_fun_median ,	
+                dlsite_id	,
+                dlsite_domain	,
+                trial_url	,
+                okazu	,
+                axis_of_soft_or_hard ,
+                genre	,
+                twitter	,
+                digiket	,
+                twitter_data_widget_id ,
+                masterup ,
+                steam ,
+                dlsite_rental ,
+                dmm_subsc ,
+                surugaya_1
+            FROM gamelist 
+        " , query_where)
+}
+
+fn make_range_query(id: i32) -> String {
+    let mut query_where = String::new();
+    match id {
+        0 => query_where = String::from(""),
+        _ => query_where = format!("where id > '{}'", id),
     }
     format!("{}{}", r"
             SELECT 

@@ -1,5 +1,6 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::games;
+use std::ops::DerefMut;
 
 pub async fn get_game(
     pools: web::Data<super::super::Pools>,
@@ -50,7 +51,24 @@ pub async fn get_games(
 pub async fn add_game(
     pools: web::Data<super::super::Pools>,
 ) -> Result<HttpResponse, Error> {
-    let new_games = super::super::actions::logics::scraping::games::get_all_games()
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut max_id: i32 = 0;
+    match r2d2_redis::redis::cmd("GET").arg("max_game_id").query(redis_conn.deref_mut()) {
+        Ok(res) => {
+            let max_id_string:String = res;
+            max_id = max_id_string.parse().map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        },
+        _ => {}
+    }
+
+    let new_games = super::super::actions::logics::scraping::games::get_latest_games_by_id(max_id)
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -61,9 +79,7 @@ pub async fn add_game(
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
-    // println!("{}", &form.)
-
-    // use web::block to offload blocking Diesel code without blocking server thread
+    
     let games = web::block(move || games::insert_new_games(new_games, &conn))
         .await
         .map_err(|e| {
