@@ -67,19 +67,27 @@ pub async fn db_setup(pools: &Pools) {
     new_user.display_name = String::from("批評空間のユーザー");
     let _ = actions::users::insert_new_user(new_user, &conn).unwrap();
 
-    // 今ある全てのゲームを取得
-    let new_games = actions::logics::scraping::games::get_all_games()
-        .await
-        .unwrap();
-
-    let _ = actions::games::insert_new_games(new_games, &conn).unwrap();
-
     // 今ある全てのブランドを取得
     let new_brands = actions::logics::scraping::brands::get_all_brands()
         .await
         .unwrap();
 
+    println!("finish get brands: {}", new_brands.len());
+
     let _ = actions::brands::insert_new_brands(new_brands, &conn).unwrap();
+
+    println!("finish setup brands");
+
+    // 今ある全てのゲームを取得
+    let new_games = actions::logics::scraping::games::get_all_games()
+        .await
+        .unwrap();
+
+    println!("finish get games: {}", new_games.len());
+
+    let _ = actions::games::insert_new_games(new_games, &conn).unwrap();
+
+    println!("finish setup games");
 
     let new_datas = actions::logics::scraping::games::get_all_data()
         .await
