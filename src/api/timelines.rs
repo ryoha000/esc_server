@@ -3,7 +3,7 @@ use super::super::actions::timelines;
 use super::super::actions::logics::mask;
 use super::super::models;
 use super::super::middleware;
-use serde::{Serialize};
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct MaskedTimeline {
@@ -14,7 +14,13 @@ pub struct MaskedTimeline {
     pub user: models::User,
 }
 
+#[derive(Deserialize)]
+pub struct GetInfo {
+    pub offset: i64,
+}
+
 pub async fn get_timelines(
+    info: web::Query<GetInfo>,
     pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
     let conn = pools.db.get().map_err(|_| {
@@ -23,7 +29,7 @@ pub async fn get_timelines(
     })?;
 
     // use web::block to offload blocking Diesel code without blocking server thread
-    let _timelines = web::block(move || timelines::find_timelines(&conn))
+    let _timelines = web::block(move || timelines::find_timelines_with_game_of_limit20(info.offset, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);

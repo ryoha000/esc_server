@@ -66,3 +66,21 @@ pub fn find_timeline_with_game_by_timeline_id(
 
     Ok(res)
 }
+
+pub fn find_timelines_with_game_of_limit20(
+    offset_num: i64,
+    conn: &PgConnection,
+) -> Result<Option<Vec<(models::Timeline, models::Game)>>, diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+    use crate::schema::timelines::dsl::*;
+
+    let res = timelines
+        .inner_join(games)
+        .order(crate::schema::timelines::created_at.desc())
+        .offset(offset_num * 20)
+        .limit(20)
+        .load::<(models::Timeline, models::Game)>(conn)
+        .optional()?;
+
+    Ok(res)
+}
