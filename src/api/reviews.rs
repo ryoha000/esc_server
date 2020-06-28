@@ -1,3 +1,4 @@
+use actix::prelude::*;
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::reviews;
 use super::super::actions::users;
@@ -108,7 +109,10 @@ pub async fn add_all_review(
 
 pub async fn add_recent_reviews(
     pools: web::Data<super::super::Pools>,
+    srv: web::Data<Addr<super::super::ws_actor::WsActor>>,
 ) -> Result<HttpResponse, Error> {
+    let ws_a = srv.get_ref().clone();
+
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -212,6 +216,13 @@ pub async fn add_recent_reviews(
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
+
+    for _tl in &_timelines {
+        ws_a.do_send(super::super::ws_actor::ClientMessage {
+            id: 0,
+            msg: _tl.id.clone(),
+        });
+    }
 
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");

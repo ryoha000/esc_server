@@ -1,3 +1,4 @@
+use actix::prelude::*;
 use actix_web::{web, Error, HttpResponse};
 use std::ops::DerefMut;
 use super::super::middleware;
@@ -7,8 +8,11 @@ use super::super::actions::timelines;
 pub async fn post_play(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
+    srv: web::Data<Addr<super::super::ws_actor::WsActor>>,
     game_id: web::Path<i32>,
 ) -> Result<HttpResponse, Error> {
+    let ws_a = srv.get_ref().clone();
+
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -41,6 +45,11 @@ pub async fn post_play(
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
+
+    ws_a.do_send(super::super::ws_actor::ClientMessage {
+        id: 0,
+        msg: _timeline.id.clone(),
+    });
 
     Ok(HttpResponse::Ok().json(_timeline))
 }

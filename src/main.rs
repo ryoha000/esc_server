@@ -1,5 +1,11 @@
-use actix_web::{web, App, HttpServer};
+use actix::prelude::*;
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web_actors::ws;
+use std::time::{Duration, Instant};
+use esc_server::ws_actor::WsActor;
+
 use esc_server::api;
+use esc_server::ws_actor;
 use esc_server;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::PgConnection;
@@ -9,6 +15,117 @@ use env_logger::Env;
 
 extern crate redis;
 extern crate r2d2_redis;
+
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+struct WsSession {
+    id: u32,
+    hb: Instant,
+    addr: Addr<WsActor>,
+}
+
+impl WsSession {
+    fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
+        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
+                println!("Websocket Client heartbeat failed, disconnecting!");
+                act.addr
+                    .do_send(esc_server::ws_actor::Disconnect { id: act.id });
+                ctx.stop();
+                return;
+            }
+            ctx.ping(b"");
+        });
+    }
+}
+
+impl Actor for WsSession {
+    type Context = ws::WebsocketContext<Self>;
+
+    fn started(&mut self, ctx: &mut Self::Context) {
+        self.hb(ctx);
+
+        let addr = ctx.address();
+        self.addr
+            .send(esc_server::ws_actor::Connect {
+                addr: addr.recipient(),
+            })
+            .into_actor(self)
+            .then(|res, act, ctx| {
+                match res {
+                    Ok(res) => act.id = res,
+                    _ => ctx.stop(),
+                }
+                fut::ready(())
+            })
+            .wait(ctx);
+    }
+
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        self.addr
+            .do_send(esc_server::ws_actor::Disconnect { id: self.id });
+        Running::Stop
+    }
+}
+
+impl Handler<esc_server::ws_actor::Message> for WsSession {
+    type Result = ();
+
+    fn handle(&mut self, msg: esc_server::ws_actor::Message, ctx: &mut Self::Context) {
+        ctx.text(msg.0);
+    }
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        let msg = match msg {
+            Err(_) => {
+                ctx.stop();
+                return;
+            }
+            Ok(msg) => msg,
+        };
+
+        match msg {
+            ws::Message::Ping(msg) => {
+                self.hb = Instant::now();
+                ctx.pong(&msg);
+            }
+            ws::Message::Pong(_) => {
+                self.hb = Instant::now();
+            }
+            ws::Message::Text(text) => {
+                let m = text.trim();
+                println!("Get message: {:?}", m.to_string());
+            }
+            ws::Message::Binary(_) => println!("Unexpected binary"),
+            ws::Message::Close(_) => {
+                ctx.stop();
+            }
+            ws::Message::Continuation(_) => {
+                ctx.stop();
+            }
+            ws::Message::Nop => (),
+        }
+    }
+}
+
+pub async fn ws_route(
+    req: HttpRequest,
+    stream: web::Payload,
+    srv: web::Data<Addr<WsActor>>,
+) -> Result<HttpResponse, Error> {
+    ws::start(
+        WsSession {
+            id: 0,
+            hb: Instant::now(),
+            addr: srv.get_ref().clone(),
+        },
+        &req,
+        stream,
+    )
+}
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
@@ -24,6 +141,8 @@ async fn main() -> std::io::Result<()> {
         .build(redis_manager)
         .expect("Failed to create redis pool.");
     
+    let ws_server = ws_actor::WsActor::new().start();
+
     let pools = esc_server::Pools {
         db: pool,
         redis: redis_pool,
@@ -36,6 +155,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .data(pools.clone())
+            .data(ws_server.clone())
+
             .wrap(Logger::default())
             .route("/", web::get().to(api::hello_world::hello_world))
 
@@ -79,6 +200,8 @@ async fn main() -> std::io::Result<()> {
 
             .route("/follows", web::get().to(api::follows::get_follow_request))
             .route("/follows/{follow_id}", web::post().to(api::follows::handle_follow_request))
+
+            .service(web::resource("/ws/").to(ws_route))
     })
     .bind("127.0.0.1:8088")?
     .run()

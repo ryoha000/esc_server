@@ -7,6 +7,7 @@ pub mod schema;
 pub mod models;
 pub mod actions;
 pub mod middleware;
+pub mod ws_actor;
 
 
 use dotenv::dotenv;
@@ -14,6 +15,7 @@ use std::env;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use actix_web::{web, HttpResponse};
+use actix::prelude::*;
 
 #[cfg(test)]
 pub mod tests;
