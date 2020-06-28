@@ -6,8 +6,7 @@ use super::scraping_shared::*;
 use anyhow::{Context, Result};
 
 pub async fn get_all_brands() -> Result<Vec<models::Brand>> {
-    println!("{}", make_query(1));
-    let fragment = execute_on_es(make_query(0)).await.unwrap();
+    let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     let mut _brands: Vec<models::Brand> = Vec::new();
     for tr in fragment.select(&tr_selector) {
@@ -20,7 +19,7 @@ pub async fn get_all_brands() -> Result<Vec<models::Brand>> {
 }
 
 pub async fn get_latest_brand_by_id(id: i32) -> Result<models::Brand> {
-    let fragment = execute_on_es(make_query(id)).await.unwrap();
+    let fragment = execute_on_es(make_query(format!("WHERE id = '{}'", id))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
 
     let mut select_tr = fragment.select(&tr_selector);
@@ -30,12 +29,21 @@ pub async fn get_latest_brand_by_id(id: i32) -> Result<models::Brand> {
     Ok(_brand)
 }
 
-fn make_query(id: i32) -> String {
-    let mut query_where = String::new();
-    match id {
-        0 => query_where = String::from(""),
-        _ => query_where = format!("WHERE id = '{}'", id),
+pub async fn get_latest_brands_by_id(id: i32) -> Result<Vec<models::Brand>> {
+    let fragment = execute_on_es(make_query(format!("WHERE id > '{}'", id))).await.unwrap();
+    let tr_selector = Selector::parse("tr").unwrap();
+
+    let mut _brands: Vec<models::Brand> = Vec::new();
+    for tr in fragment.select(&tr_selector) {
+        let mut _brand = models::Brand::get_brand_from_row(tr);
+        if _brand.id != 0 {
+            _brands.push(_brand);
+        }
     }
+    Ok(_brands)
+}
+
+fn make_query(query_where: String) -> String {
     format!("{}{}", r"
             SELECT 
                 id,

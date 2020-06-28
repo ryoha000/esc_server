@@ -1,5 +1,6 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::brands;
+use std::ops::DerefMut;
 
 pub async fn get_brand(
     pools: web::Data<super::super::Pools>,
@@ -50,12 +51,42 @@ pub async fn get_brands(
 pub async fn add_brand(
     pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
-    let new_brands = super::super::actions::logics::scraping::brands::get_all_brands()
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut max_id: i32 = 0;
+    match r2d2_redis::redis::cmd("GET").arg("max_game_id").query(redis_conn.deref_mut()) {
+        Ok(res) => {
+            let max_id_string:String = res;
+            max_id = max_id_string.parse().map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?
+        },
+        _ => {}
+    }
+
+    let new_brands = super::super::actions::logics::scraping::brands::get_latest_brands_by_id(max_id)
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
+
+    let mut new_max_id = 0;
+    for r in &new_brands {
+        if new_max_id < r.id {
+            new_max_id = r.id
+        }
+    }
+    r2d2_redis::redis::cmd("SET").arg("max_game_id").arg(format!("{:?}", new_max_id)).query(redis_conn.deref_mut()).map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    if new_brands.len() == 0 { return Ok(HttpResponse::Ok().body("there is no new game")) }
 
     println!("{:?}", new_brands.len());
     let conn = pools.db.get().map_err(|_| {

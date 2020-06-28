@@ -75,6 +75,19 @@ pub async fn add_game(
             HttpResponse::InternalServerError().finish()
         })?;
 
+    let mut new_max_id = 0;
+    for r in &new_games {
+        if new_max_id < r.id {
+            new_max_id = r.id
+        }
+    }
+    r2d2_redis::redis::cmd("SET").arg("max_game_id").arg(format!("{:?}", new_max_id)).query(redis_conn.deref_mut()).map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    if new_games.len() == 0 { return Ok(HttpResponse::Ok().body("there is no new game")) }
+
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()

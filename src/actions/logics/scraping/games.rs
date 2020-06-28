@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
 
 pub async fn get_all_games() -> Result<Vec<models::Game>> {
-    let fragment = execute_on_es(make_query(0)).await.unwrap();
+    let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     let mut _games: Vec<models::Game> = Vec::new();
     for tr in fragment.select(&tr_selector) {
@@ -79,7 +79,7 @@ pub async fn get_all_data() -> Result<Vec<NumData>> {
 }
 
 pub async fn get_latest_game_by_id(id: i32) -> Result<models::Game> {
-    let fragment = execute_on_es(make_query(id)).await.unwrap();
+    let fragment = execute_on_es(make_query(format!("where id = '{}'", id))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
 
     let mut select_tr = fragment.select(&tr_selector);
@@ -90,7 +90,7 @@ pub async fn get_latest_game_by_id(id: i32) -> Result<models::Game> {
 }
 
 pub async fn get_latest_games_by_id(id: i32) -> Result<Vec<models::Game>> {
-    let fragment = execute_on_es(make_range_query(id)).await.unwrap();
+    let fragment = execute_on_es(make_query(format!("where id > '{}'", id))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
 
     let mut _games: Vec<models::Game> = Vec::new();
@@ -130,55 +130,7 @@ pub async fn get_test_game(header: reqwest::header::HeaderMap) -> models::Game {
     _games.get(0).unwrap().clone()
 }
 
-fn make_query(id: i32) -> String {
-    let mut query_where = String::new();
-    match id {
-        0 => query_where = String::from(""),
-        _ => query_where = format!("where id = '{}'", id),
-    }
-    format!("{}{}", r"
-            SELECT 
-                id,
-                gamename ,
-                furigana ,
-                sellday,
-                brandname ,
-                comike	,
-                shoukai	,
-                model	,
-                erogame	,
-                banner_url	,
-                gyutto_id	,
-                dmm	,
-                dmm_genre	,
-                dmm_genre_2	,
-                erogametokuten ,
-                total_play_time_median ,	
-                time_before_understanding_fun_median ,	
-                dlsite_id	,
-                dlsite_domain	,
-                trial_url	,
-                okazu	,
-                axis_of_soft_or_hard ,
-                genre	,
-                twitter	,
-                digiket	,
-                twitter_data_widget_id ,
-                masterup ,
-                steam ,
-                dlsite_rental ,
-                dmm_subsc ,
-                surugaya_1
-            FROM gamelist 
-        " , query_where)
-}
-
-fn make_range_query(id: i32) -> String {
-    let mut query_where = String::new();
-    match id {
-        0 => query_where = String::from(""),
-        _ => query_where = format!("where id > '{}'", id),
-    }
+fn make_query(query_where: String) -> String {
     format!("{}{}", r"
             SELECT 
                 id,
