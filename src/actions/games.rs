@@ -16,6 +16,19 @@ pub fn find_game_by_id(
     Ok(game)
 }
 
+pub fn find_games_limited(
+    conn: &PgConnection,
+) -> Result<Option<Vec<(i32, Option<String>)>>, diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+
+    let get_games = games
+        .select((id, gamename))
+        .load::<(i32, Option<String>)>(conn)
+        .optional()?;
+
+    Ok(get_games)
+}
+
 pub fn find_games(
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::Game>>, diesel::result::Error> {
@@ -26,6 +39,26 @@ pub fn find_games(
         .optional()?;
 
     Ok(game)
+}
+
+pub fn find_games_by_ids (
+    search_ids: Vec<i32>,
+    conn: &PgConnection,
+) -> Result<Vec<models::Game>, diesel::result::Error> {
+    let mut where_query = String::new();
+    let _len = search_ids.len();
+    for (i, id) in search_ids.iter().enumerate() {
+        if i == _len {
+            where_query.push_str(&(format!("id = \'{}\'", id.to_string())))
+        } else {
+            where_query.push_str(&(format!("id = \'{}\' OR ", id.to_string())))
+        }
+    }
+    println!("{}", where_query);
+    let query = format!("SELECT * FROM games WHERE {} ;", where_query);
+    println!("{}", query);
+    let res_games: Vec<models::Game> = diesel::sql_query(query).load(conn)?;
+    Ok(res_games)
 }
 
 pub fn insert_new_game(

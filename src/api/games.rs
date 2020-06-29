@@ -1,6 +1,13 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::games;
 use std::ops::DerefMut;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MinimalGame {
+    pub id: i32,
+    pub gamename: Option<String>,
+}
 
 pub async fn get_game(
     pools: web::Data<super::super::Pools>,
@@ -29,7 +36,32 @@ pub async fn get_game(
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameIDs {
+    pub ids: Vec<i32>,
+}
+
 pub async fn get_games(
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<GameIDs>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    // use web::block to offload blocking Diesel code without blocking server thread
+    let games = web::block(move || games::find_games_by_ids(form.ids.clone(), &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(games))
+}
+
+pub async fn get_minimal_games(
     pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
     let conn = pools.db.get().map_err(|_| {
@@ -38,14 +70,24 @@ pub async fn get_games(
     })?;
 
     // use web::block to offload blocking Diesel code without blocking server thread
-    let game = web::block(move || games::find_games(&conn))
+    let games = web::block(move || games::find_games_limited(&conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
 
-    Ok(HttpResponse::Ok().json(game))
+    let mut minimal_games: Vec<MinimalGame> = Vec::new();
+    if let Some(_games) = games {
+        for game in _games {
+            let mg = MinimalGame {
+                id: game.0,
+                gamename: game.1,
+            };
+            minimal_games.push(mg);
+        }
+    }
+    Ok(HttpResponse::Ok().json(minimal_games))
 }
 
 pub async fn add_game(
