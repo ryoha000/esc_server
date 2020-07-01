@@ -108,10 +108,7 @@ impl models::Review {
     
         for (i, td) in tr.select(&td_selector).enumerate() {
             match (i + 1) as u32 {
-                1 => _review.game_id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                1 => _review.game_id = i32_from_string(td.inner_html()),
                 2 => _review.es_user_id = td.inner_html(),
                 3 => _review.tokuten = option_i32_from_string(td.inner_html()),
                 4 => _review.tourokubi = option_datetime_from_string(td.inner_html()),

@@ -50,8 +50,9 @@ pub async fn get_games(
         HttpResponse::InternalServerError().finish()
     })?;
 
+    let ids = form.ids.clone();
     // use web::block to offload blocking Diesel code without blocking server thread
-    let games = web::block(move || games::find_games_by_ids(form.ids.clone(), &conn))
+    let games = web::block(move || games::find_games_by_ids(&ids, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);

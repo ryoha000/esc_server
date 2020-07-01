@@ -74,10 +74,7 @@ impl models::Brand {
     
         for (i, td) in tr.select(&td_selector).enumerate() {
             match i as u32 {
-                0 => _brand.id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                0 => _brand.id = i32_from_string(td.inner_html()),
                 1 => _brand.brandname = td.inner_html(),
                 2 => _brand.brandfurigana = option_string_from_string(td.inner_html()),
                 3 => _brand.makername = option_string_from_string(td.inner_html()),

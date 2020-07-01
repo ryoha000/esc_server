@@ -42,22 +42,10 @@ impl NumData {
     
         for (i, td) in tr.select(&td_selector).enumerate() {
             match i as u32 {
-                0 => _data.id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
-                1 => _data.median = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
-                2 => _data.stdev = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
-                3 => _data.count2 = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                0 => _data.id = i32_from_string(td.inner_html()),
+                1 => _data.median = i32_from_string(td.inner_html()),
+                2 => _data.stdev = i32_from_string(td.inner_html()),
+                3 => _data.count2 = i32_from_string(td.inner_html()),
                 _ => {}
             }
         }
@@ -204,17 +192,11 @@ impl models::Game {
     
         for (i, td) in tr.select(&td_selector).enumerate() {
             match i as u32 {
-                0 => _game.id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                0 => _game.id = i32_from_string(td.inner_html()),
                 1 => _game.gamename = option_string_from_string(td.inner_html()),
                 2 => _game.furigana = option_string_from_string(td.inner_html()),
                 3 => _game.sellday = option_date_from_string(td.inner_html()),
-                4 => _game.brand_id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                4 => _game.brand_id = i32_from_string(td.inner_html()),
                 5 => _game.comike = option_i32_from_string(td.inner_html()),
                 6 => _game.shoukai = option_string_from_string(td.inner_html()),
                 7 => _game.model = option_string_from_string(td.inner_html()),

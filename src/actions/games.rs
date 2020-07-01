@@ -42,21 +42,19 @@ pub fn find_games(
 }
 
 pub fn find_games_by_ids (
-    search_ids: Vec<i32>,
+    search_ids: &Vec<i32>,
     conn: &PgConnection,
 ) -> Result<Vec<models::Game>, diesel::result::Error> {
     let mut where_query = String::new();
     let _len = search_ids.len();
     for (i, id) in search_ids.iter().enumerate() {
-        if i == _len {
+        if i == _len - 1 {
             where_query.push_str(&(format!("id = \'{}\'", id.to_string())))
         } else {
             where_query.push_str(&(format!("id = \'{}\' OR ", id.to_string())))
         }
     }
-    println!("{}", where_query);
-    let query = format!("SELECT * FROM games WHERE {} ;", where_query);
-    println!("{}", query);
+    let query = format!("SELECT * FROM games WHERE {}", where_query);
     let res_games: Vec<models::Game> = diesel::sql_query(query).load(conn)?;
     Ok(res_games)
 }

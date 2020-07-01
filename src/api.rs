@@ -9,3 +9,4 @@ pub mod lists;
 pub mod listmaps;
 pub mod reviews;
 pub mod messages;
+pub mod campaigns;

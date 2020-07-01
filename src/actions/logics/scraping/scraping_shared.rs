@@ -98,3 +98,10 @@ pub fn option_string_from_string(b: String) -> Option<String> {
         _ => Some(b)
     }
 }
+
+pub fn i32_from_string(b: String) -> i32 {
+    match b.parse() {
+        Ok(b) => b,
+        _ => 0
+    }
+}

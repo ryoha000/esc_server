@@ -202,6 +202,8 @@ async fn main() -> std::io::Result<()> {
                 .route("/follows", web::get().to(api::follows::get_follow_request))
                 .route("/follows/{follow_id}", web::post().to(api::follows::handle_follow_request))
 
+                .route("/campaigns", web::get().to(api::campaigns::get_campaigns))
+                .route("/campaigns", web::post().to(api::campaigns::set_campaigns))
                 .service(web::resource("/ws/").to(ws_route))
         )
     })

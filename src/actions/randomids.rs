@@ -88,15 +88,13 @@ pub fn get_randomids_by_user_ids (
     let mut where_query = String::new();
     let _len = search_user_ids.len();
     for (i, id) in search_user_ids.iter().enumerate() {
-        if i == _len {
+        if i == _len - 1 {
             where_query.push_str(&(format!("user_id = \'{}\'", id.to_string())))
         } else {
             where_query.push_str(&(format!("user_id = \'{}\' OR ", id.to_string())))
         }
     }
-    println!("{}", where_query);
     let query = format!("SELECT randomids.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE purpose = {} AND ( {} );", search_purpose, where_query);
-    println!("{}", query);
     let ids: Vec<models::User> = diesel::sql_query(query).load(conn)?;
     Ok(ids)
 }
