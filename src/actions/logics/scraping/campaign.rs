@@ -13,6 +13,7 @@ pub struct Campaign {
     pub url: Option<String>,
     pub end_timestamp: Option<chrono::NaiveDateTime>,
     pub content: Option<String>,
+    pub store: Option<i32>,
     pub games: Vec<CampaignGame>,
 }
 
@@ -24,6 +25,7 @@ impl Campaign {
             url: None,
             end_timestamp: None,
             content: None,
+            store: None,
             games: vec![],
         }
     }
@@ -66,6 +68,7 @@ pub struct CampaignGame {
     pub stdev: i32,
     pub count2: i32,
     pub content: Option<String>,
+    pub url: Option<String>,
 }
 
 impl CampaignGame {
@@ -106,6 +109,7 @@ impl CampaignGame {
             stdev: 0,
             count2: 0,
             content: None,
+            url: None,
         }
     }
 }
@@ -163,6 +167,8 @@ fn make_query() -> String {
                 gamelist.stdev,
                 gamelist.count2,
                 cg.content,
+                cg.url,
+                cl.store,
                 cl.id,
                 cl.name,
                 cl.url,
@@ -185,10 +191,7 @@ impl Campaign {
                 1 => _game.gamename = option_string_from_string(td.inner_html()),
                 2 => _game.furigana = option_string_from_string(td.inner_html()),
                 3 => _game.sellday = option_date_from_string(td.inner_html()),
-                4 => _game.brand_id = match td.inner_html().parse() {
-                    Ok(b) => b,
-                    _ => 0
-                },
+                4 => _game.brand_id = i32_from_string(td.inner_html()),
                 5 => _game.comike = option_i32_from_string(td.inner_html()),
                 6 => _game.shoukai = option_string_from_string(td.inner_html()),
                 7 => _game.model = option_string_from_string(td.inner_html()),
@@ -219,11 +222,13 @@ impl Campaign {
                 32 => _game.stdev = i32_from_string(td.inner_html()),
                 33 => _game.count2 = i32_from_string(td.inner_html()),
                 34 => _game.content = option_string_from_string(td.inner_html()),
-                35 => _campaign.id = i32_from_string(td.inner_html()),
-                36 => _campaign.name = option_string_from_string(td.inner_html()),
-                37 => _campaign.url = option_string_from_string(td.inner_html()),
-                38 => _campaign.content = option_string_from_string(td.inner_html()),
-                39 => _campaign.end_timestamp = option_datetime_from_string(td.inner_html()),
+                35 => _game.url = option_string_from_string(td.inner_html()),
+                36 => _campaign.store = option_i32_from_string(td.inner_html()),
+                37 => _campaign.id = i32_from_string(td.inner_html()),
+                38 => _campaign.name = option_string_from_string(td.inner_html()),
+                39 => _campaign.url = option_string_from_string(td.inner_html()),
+                40 => _campaign.content = option_string_from_string(td.inner_html()),
+                41 => _campaign.end_timestamp = option_datetime_from_string(td.inner_html()),
                 _ => {}
             }
         }

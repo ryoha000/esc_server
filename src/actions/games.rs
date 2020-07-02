@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 
 use super::super::models;
+use chrono::Datelike;
 
 pub fn find_game_by_id(
     _id: i32,
@@ -24,6 +25,21 @@ pub fn find_games_limited(
     let get_games = games
         .select((id, gamename))
         .load::<(i32, Option<String>)>(conn)
+        .optional()?;
+
+    Ok(get_games)
+}
+
+pub fn find_games_recent(
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::Game>>, diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+
+    let t = chrono::Local::today();
+    let get_games = games
+        .filter(sellday.gt(chrono::NaiveDate::from_ymd(t.year(), t.month(), t.day())))
+        .filter(sellday.ne(chrono::NaiveDate::from_ymd(2030, 1, 1)))
+        .load::<models::Game>(conn)
         .optional()?;
 
     Ok(get_games)

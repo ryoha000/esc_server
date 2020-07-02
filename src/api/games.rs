@@ -173,3 +173,21 @@ pub async fn add_id_game(
 
     Ok(HttpResponse::Ok().json(game))
 }
+
+pub async fn get_recent_games(
+    pools: web::Data<super::super::Pools>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let games = web::block(move || games::find_games_recent(&conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Ok(HttpResponse::Ok().json(games))
+}

@@ -23,7 +23,6 @@ pub async fn set_campaigns(
         .cmd("DEL").arg("campaigns");
 
     for (key, value) in &_campaigns {
-        println!("{}: {:?}", key, value);
         let v = serde_json::to_string(value).map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()

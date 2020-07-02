@@ -204,6 +204,8 @@ async fn main() -> std::io::Result<()> {
 
                 .route("/campaigns", web::get().to(api::campaigns::get_campaigns))
                 .route("/campaigns", web::post().to(api::campaigns::set_campaigns))
+
+                .route("/recentgames", web::get().to(api::games::get_recent_games))
                 .service(web::resource("/ws/").to(ws_route))
         )
     })
