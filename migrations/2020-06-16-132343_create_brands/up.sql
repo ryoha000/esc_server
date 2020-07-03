@@ -16,6 +16,5 @@ CREATE TABLE brands (
   twitter_data_widget_id INTEGER,
   notes text, ---例) このページはコンチェルトの許諾を得て使用しております。(C) 2014 Concerto All Rights Reserved.
   erogetrailers INTEGER,
-  cien INTEGER,
-  scheduled_date DATE NOT NULL
+  cien INTEGER
 )

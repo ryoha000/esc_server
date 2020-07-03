@@ -95,7 +95,7 @@ pub fn option_datetime_from_string(b: String) -> Option<chrono::NaiveDateTime> {
 pub fn option_string_from_string(b: String) -> Option<String> {
     match &*b {
         "" => None,
-        _ => Some(b)
+        _ => Some(b.replace("&amp;", " "))
     }
 }
 

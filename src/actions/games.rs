@@ -6,12 +6,14 @@ use chrono::Datelike;
 pub fn find_game_by_id(
     _id: i32,
     conn: &PgConnection,
-) -> Result<Option<models::Game>, diesel::result::Error> {
+) -> Result<Option<(models::Game, models::Brand)>, diesel::result::Error> {
     use crate::schema::games::dsl::*;
+    use crate::schema::brands::dsl::*;
 
     let game = games
-        .filter(id.eq(_id))
-        .first::<models::Game>(conn)
+        .inner_join(brands)
+        .filter(crate::schema::games::id.eq(_id))
+        .first::<(models::Game, models::Brand)>(conn)
         .optional()?;
 
     Ok(game)

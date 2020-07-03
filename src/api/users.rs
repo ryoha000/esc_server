@@ -228,8 +228,8 @@ pub async fn login(
                 HttpResponse::InternalServerError().finish()
             })?;
         
-        res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
+        return Ok(HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user))
     }
 
-    Ok(res)
+    Ok(HttpResponse::NotFound().body("user not found"))
 }

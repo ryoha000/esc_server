@@ -1,5 +1,6 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::games;
+use super::super::models;
 use std::ops::DerefMut;
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +8,12 @@ use serde::{Deserialize, Serialize};
 pub struct MinimalGame {
     pub id: i32,
     pub gamename: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GameAndBrand {
+    pub game: models::Game,
+    pub brand: models::Brand,
 }
 
 pub async fn get_game(
@@ -20,20 +27,18 @@ pub async fn get_game(
     let game_id = game_id.into_inner();
 
     // use web::block to offload blocking Diesel code without blocking server thread
-    let game = web::block(move || games::find_game_by_id(game_id, &conn))
+    if let Some((game, brand)) = web::block(move || games::find_game_by_id(game_id, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
-        })?;
+        })? {
+            return Ok(HttpResponse::Ok().json(GameAndBrand { game: game, brand: brand }))
+        }
 
-    if let Some(game) = game {
-        Ok(HttpResponse::Ok().json(game))
-    } else {
-        let res = HttpResponse::NotFound()
-            .body(format!("No game found with uid: {}", game_id));
-        Ok(res)
-    }
+    let res = HttpResponse::NotFound()
+        .body(format!("No game found with uid: {}", game_id));
+    Ok(res)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -17,7 +17,6 @@ table! {
         notes -> Nullable<Text>,
         erogetrailers -> Nullable<Int4>,
         cien -> Nullable<Int4>,
-        scheduled_date -> Date,
     }
 }
 
@@ -57,17 +56,17 @@ table! {
         dlsite_domain -> Nullable<Text>,
         trial_url -> Nullable<Text>,
         okazu -> Nullable<Bool>,
-        axis_of_soft_or_hard -> Nullable<Int4>,
         genre -> Nullable<Text>,
         twitter -> Nullable<Text>,
-        digiket -> Nullable<Text>,
         twitter_data_widget_id -> Nullable<Int4>,
         masterup -> Nullable<Date>,
         steam -> Nullable<Int4>,
         dlsite_rental -> Nullable<Bool>,
         dmm_subsc -> Nullable<Text>,
         surugaya_1 -> Nullable<Int4>,
-        scheduled_date -> Date,
+        median -> Nullable<Int4>,
+        stdev -> Nullable<Int4>,
+        count2 -> Nullable<Int4>,
     }
 }
 

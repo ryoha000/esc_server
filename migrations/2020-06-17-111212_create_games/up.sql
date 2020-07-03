@@ -22,15 +22,15 @@ CREATE TABLE games (
   dlsite_domain	text,
   trial_url	text,
   okazu	boolean,
-  axis_of_soft_or_hard integer,
   genre	text,
   twitter	text,
-  digiket	text,
   twitter_data_widget_id INTEGER,
   masterup date,
   steam INTEGER,
   dlsite_rental boolean,
   dmm_subsc text,
   surugaya_1 INTEGER,
-  scheduled_date DATE NOT NULL
+  median INTEGER,
+  stdev INTEGER,
+  count2 INTEGER
 )

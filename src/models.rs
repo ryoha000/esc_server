@@ -88,7 +88,6 @@ pub struct Brand {
     pub notes: Option<String>,
     pub erogetrailers: Option<i32>,
     pub cien: Option<i32>,
-    pub scheduled_date: NaiveDate,
 }
 
 impl Brand {
@@ -111,7 +110,6 @@ impl Brand {
             notes: None,
             erogetrailers: None,
             cien: None,
-            scheduled_date: NaiveDate::from_ymd(2030, 3, 31),
         }
     }
 }
@@ -125,9 +123,6 @@ pub struct Game {
     pub furigana: Option<String>,
     pub sellday: Option<NaiveDate>,
     pub brand_id: i32,
-    // pub median: Option<i32>,
-    // pub stdev: Option<i32>,
-    // pub count2: Option<i32>,
     pub comike: Option<i32>,
     pub shoukai: Option<String>,
     pub model: Option<String>,
@@ -144,10 +139,8 @@ pub struct Game {
     pub dlsite_domain: Option<String>,
     pub trial_url: Option<String>,
     pub okazu: Option<bool>,
-    pub axis_of_soft_or_hard: Option<i32>,
     pub genre: Option<String>,
     pub twitter: Option<String>,
-    pub digiket: Option<String>,
     pub twitter_data_widget_id: Option<i32>,
     pub masterup: Option<NaiveDate>,
     // pub masterup_tourokubi: Option<chrono::NaiveDateTime>,
@@ -155,7 +148,9 @@ pub struct Game {
     pub dlsite_rental: Option<bool>,
     pub dmm_subsc: Option<String>,
     pub surugaya_1: Option<i32>,
-    pub scheduled_date: NaiveDate,
+    pub median: Option<i32>,
+    pub stdev: Option<i32>,
+    pub count2: Option<i32>,
 }
 
 impl Game {
@@ -182,17 +177,17 @@ impl Game {
             dlsite_domain: None,
             trial_url: None,
             okazu: None,
-            axis_of_soft_or_hard: None,
             genre: None,
             twitter: None,
-            digiket: None,
             twitter_data_widget_id: None,
             masterup: None,
             steam: None,
             dlsite_rental: None,
             dmm_subsc: None,
             surugaya_1: None,
-            scheduled_date: NaiveDate::from_ymd(2030, 3, 31),
+            median: None,
+            stdev: None,
+            count2: None,
         }
     }
 }

@@ -9,14 +9,11 @@ pub mod actions;
 pub mod middleware;
 pub mod ws_actor;
 
-
 use dotenv::dotenv;
 use std::env;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use actix_web::{web, HttpResponse};
-use actix::prelude::*;
-use std::ops::DerefMut;
+use actix_web::{HttpResponse};
 
 #[cfg(test)]
 pub mod tests;
@@ -88,20 +85,4 @@ pub async fn db_setup(pools: &Pools) {
     let _ = actions::games::insert_new_games(new_games, &conn).unwrap();
 
     println!("finish setup games");
-
-    let new_datas = actions::logics::scraping::games::get_all_data()
-        .await
-        .unwrap();
-
-    let mut redis_conn = pools.redis.get().unwrap();
-
-    let mut new_max_id = 0;
-
-    for r in new_datas {
-        r2d2_redis::redis::cmd("SET").arg(format!("game_id:{:?}", r.id)).arg(format!("{:?} {:?} {:?}", r.median, r.stdev, r.count2)).query::<()>(redis_conn.deref_mut()).unwrap();
-        if new_max_id < r.id {
-            new_max_id = r.id
-        }
-    }
-    r2d2_redis::redis::cmd("SET").arg("max_game_id").arg(format!("{:?}", new_max_id)).query::<()>(redis_conn.deref_mut()).unwrap();
 }
