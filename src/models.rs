@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::{Serialize, Deserialize};
 use chrono;
 use chrono::naive::NaiveDate;
 use crate::schema::users;
@@ -23,7 +23,7 @@ pub struct Post {
     pub published: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Insertable, QueryableByName)]
+#[derive(Debug, Clone, Serialize, Deserialize, Queryable, Insertable, QueryableByName, AsChangeset)]
 #[table_name = "users"]
 pub struct User {
     pub id: String,

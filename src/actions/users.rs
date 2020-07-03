@@ -64,6 +64,20 @@ pub fn insert_new_user(
     Ok(new_user)
 }
 
+pub fn update_user(
+    user_id: String,
+    update_user: &models::User,
+    conn: &PgConnection,
+) -> Result<Vec<models::User>, diesel::result::Error> {
+    use crate::schema::users::dsl::*;
+
+    let update_row = diesel::update(users.filter(id.eq(user_id)))
+        .set(update_user)
+        .load::<models::User>(conn);
+
+    update_row
+}
+
 pub fn get_all_user_id(
     conn: &PgConnection,
 ) -> Result<Option<Vec<(String, String)>>, diesel::result::Error> {

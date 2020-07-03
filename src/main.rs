@@ -165,6 +165,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/users/{user_id}", web::get().to(api::users::get_user))
                 .route("/users", web::get().to(api::users::get_users))
                 .route("/users", web::post().to(api::users::signup))
+                .route("/users", web::put().to(api::users::edit_user))
                 .route("/users/{user_id}/follows", web::get().to(api::follows::get_followers))
                 .route("/users/{followee_id}/follows", web::post().to(api::follows::post_follows))
                 .route("/users/{user_id}/messages", web::post().to(api::messages::post_messages))
@@ -180,7 +181,6 @@ async fn main() -> std::io::Result<()> {
                 .route("/games", web::get().to(api::games::get_minimal_games))
                 .route("/games", web::post().to(api::games::get_games))
                 .route("/games/{game_id}", web::get().to(api::games::get_game))
-                .route("/games/recent", web::post().to(api::games::add_game))
                 // for test
                 .route("games/{game_id}", web::post().to(api::games::add_id_game))
                 
@@ -206,6 +206,8 @@ async fn main() -> std::io::Result<()> {
                 .route("/campaigns", web::post().to(api::campaigns::set_campaigns))
 
                 .route("/recentgames", web::get().to(api::games::get_recent_games))
+                .route("/recentgames", web::post().to(api::games::add_game))
+
                 .service(web::resource("/ws/").to(ws_route))
         )
     })

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use super::super::actions::users;
 use super::super::actions::randomids;
 use super::super::actions::reviews;
-use super::super::actions::logics::{hash::make_hashed_string, es_login};
+use super::super::actions::logics::{es_login};
 use super::super::actions::logics::scraping;
 use super::super::models;
 use super::super::middleware;
@@ -20,6 +20,11 @@ pub struct NewUser {
 pub struct PostLogin {
     pub name: String,
     pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EditUser {
+    pub user: models::User,
 }
 
 pub async fn me(
@@ -77,7 +82,6 @@ pub async fn get_user(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    // use web::block to offload blocking Diesel code without blocking server thread
     let user = web::block(move || users::find_user_by_uid(search_user.id, &conn))
         .await
         .map_err(|e| {
@@ -153,7 +157,6 @@ pub async fn signup(
             r2d2_redis::redis::pipe()
                 .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
                 .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
-                .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
                 .query(redis_conn.deref_mut()).map_err(|e| {
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
@@ -222,7 +225,6 @@ pub async fn login(
         r2d2_redis::redis::pipe()
             .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
             .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
-            .cmd("SET").arg(&format!("session_hash:{}", make_hashed_string(&session_id))).arg(user.id.clone())
             .query(redis_conn.deref_mut()).map_err(|e| {
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
@@ -232,4 +234,54 @@ pub async fn login(
     }
 
     Ok(HttpResponse::NotFound().body("user not found"))
+}
+
+pub async fn edit_user(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<EditUser>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
+        let uid = me.user_id.clone();
+        let prev_user = web::block(move || users::find_user_by_uid(me.user_id, &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+        if let Some(pu) = prev_user {
+            if pu.es_user_id != form.user.es_user_id || uid != form.user.id {
+                return Ok(HttpResponse::Forbidden().body("you are not this user"))
+            }
+        } else {
+            return Ok(HttpResponse::NotFound().body("this user not found"))
+        }
+
+        let conn = pools.db.get().map_err(|_| {
+            eprintln!("couldn't get db connection from pools");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+        let user = web::block(move || users::update_user(uid, &form.user, &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+        
+        return Ok(HttpResponse::Ok().json(user))
+    } else {
+        return Ok(HttpResponse::Unauthorized().body("Please login"))
+    }
 }
