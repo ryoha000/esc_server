@@ -75,13 +75,30 @@ pub async fn get_followers(
         HttpResponse::InternalServerError().finish()
     })?;
 
+    let _user: models::User;
+    match web::block(move || randomids::get_user_by_id(user_uuid.clone(), &conn)).await {
+        Ok(user) => _user = user,
+        _ => return Ok(HttpResponse::NotFound().body("user not found"))
+    }
+
+    let unmask_user_uuid: uuid::Uuid;
+    match _user.id.parse::<uuid::Uuid>() {
+        Ok(u_uuid) => unmask_user_uuid = u_uuid,
+        _ => return Ok(HttpResponse::BadRequest().body("please enter a uuid"))
+    }
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
     let mut redis_conn = pools.redis.get().map_err(|_| {
         eprintln!("couldn't get redis connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
 
     if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
-        let _follows = web::block(move || follows::find_followers_by_uid(user_uuid, &conn))
+        let _follows = web::block(move || follows::find_followers_by_uid(unmask_user_uuid, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
@@ -96,8 +113,7 @@ pub async fn get_followers(
                     is_follower = true;
                 }
             }
-            // フォローしてる人だけじゃなくて自分も見れるように
-            if user_id == me.user_id {
+            if _user.id == me.user_id {
                 is_follower = true;
             }
             if !is_follower {
@@ -142,12 +158,29 @@ pub async fn get_followees(
         HttpResponse::InternalServerError().finish()
     })?;
 
+    let _user: models::User;
+    match web::block(move || randomids::get_user_by_id(user_uuid.clone(), &conn)).await {
+        Ok(user) => _user = user,
+        _ => return Ok(HttpResponse::NotFound().body("user not found"))
+    }
+
+    let unmask_user_uuid: uuid::Uuid;
+    match _user.id.parse::<uuid::Uuid>() {
+        Ok(u_uuid) => unmask_user_uuid = u_uuid,
+        _ => return Ok(HttpResponse::BadRequest().body("please enter a uuid"))
+    }
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
     let mut redis_conn = pools.redis.get().map_err(|_| {
         eprintln!("couldn't get redis connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let _followees = web::block(move || follows::find_followees_by_uid(user_uuid, &conn))
+    let _followees = web::block(move || follows::find_followees_by_uid(unmask_user_uuid, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
@@ -164,7 +197,7 @@ pub async fn get_followees(
         // maskする必要のあるUserと、必要のないUserで分離
         if let Some(me) = optionnal_me {
             // もし自分ならmaskせずにreturn
-            if user_id != me.user_id {
+            if _user.id != me.user_id {
                 return Ok(HttpResponse::Ok().json(followees))
             }
             // 自分がFollowしてるユーザーを取得
