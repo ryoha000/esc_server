@@ -23,8 +23,6 @@ impl FromRequest for Authorized {
 
 fn is_authorized(req: &HttpRequest) -> Option<String> {
     if let Some(value) = req.headers().get("cookie") {
-        // actual implementation that checks header here
-        dbg!(value);
         let c: &str = value.to_str().unwrap();
         if let Some(v) = c.split("=").nth(1) {
             Some(v.to_string())

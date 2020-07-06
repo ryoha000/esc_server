@@ -51,6 +51,25 @@ pub fn insert_new_timelines(
     Ok(new_timelines)
 }
 
+pub fn insert_new_timelines_each(
+    new_timelines: Vec<models::Timeline>,
+    conn: &PgConnection,
+) -> Result<Vec<models::Timeline>, diesel::result::Error> {
+    use crate::schema::timelines::dsl::*;
+
+    for nt in &new_timelines {
+        match diesel::insert_into(timelines).values(nt).execute(conn) {
+            Ok(_) => {},
+            e => {
+                eprintln!("{:?}", e);
+                eprintln!("{:?}", nt);
+            }
+        }
+    }
+
+    Ok(new_timelines)
+}
+
 pub fn find_timeline_with_game_by_timeline_id(
     search_timeline_id: String,
     conn: &PgConnection,

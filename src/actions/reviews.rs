@@ -59,3 +59,13 @@ pub fn insert_new_reviews(
 
     Ok(new_reviews)
 }
+
+pub fn get_max_es_id(
+    conn: &PgConnection,
+) -> Result<Option<i32>, diesel::result::Error> {
+    use crate::schema::reviews::dsl::*;
+
+    let max_id = reviews.select(diesel::dsl::max(es_id)).first::<Option<i32>>(conn);
+
+    max_id
+}

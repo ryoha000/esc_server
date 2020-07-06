@@ -273,14 +273,14 @@ pub async fn edit_user(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let user = web::block(move || users::update_user(uid, &form.user, &conn))
+        let users = web::block(move || users::update_user(uid, &form.user, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?;
         
-        return Ok(HttpResponse::Ok().json(user))
+        return Ok(HttpResponse::Ok().json(users.get(0)))
     } else {
         return Ok(HttpResponse::Unauthorized().body("Please login"))
     }

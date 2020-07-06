@@ -5,7 +5,6 @@ use super::super::actions::users;
 use super::super::actions::timelines;
 use super::super::actions::reviewlogs;
 use super::super::models;
-use std::ops::DerefMut;
 
 pub async fn get_review(
     pools: web::Data<super::super::Pools>,
@@ -111,6 +110,7 @@ pub async fn add_recent_reviews(
     pools: web::Data<super::super::Pools>,
     srv: web::Data<Addr<super::super::ws_actor::WsActor>>,
 ) -> Result<HttpResponse, Error> {
+    println!("a");
     let ws_a = srv.get_ref().clone();
 
     let conn = pools.db.get().map_err(|_| {
@@ -118,22 +118,18 @@ pub async fn add_recent_reviews(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let mut redis_conn = pools.redis.get().map_err(|_| {
-        eprintln!("couldn't get redis connection from pools");
-        HttpResponse::InternalServerError().finish()
-    })?;
+    let mut max_id = 0;
 
-    let mut max_id: i32 = 0;
-    match r2d2_redis::redis::cmd("GET").arg("max_review_id").query(redis_conn.deref_mut()) {
-        Ok(res) => {
-            let max_id_string:String = res;
-            max_id = max_id_string.parse().map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?
-        },
-        _ => max_id = 2013000
-    }
+    if let Some(mid) = web::block(move || reviews::get_max_es_id(&conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })? {
+            max_id = mid;
+        }
+
+    max_id = std::cmp::max(max_id, 2013000);
 
 
     let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews(max_id)
@@ -144,6 +140,7 @@ pub async fn add_recent_reviews(
         })?;
 
     let mut new_max_id = 0;
+    println!("{:?}", max_id);
 
     for r in &new_reviews {
         if let Some(id) = r.es_id {
@@ -152,8 +149,14 @@ pub async fn add_recent_reviews(
             }
         }
     }
+    println!("{:?}", new_max_id);
 
     let mut user_ids: Vec<(String, String)> = Vec::new();
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
 
     match web::block(move || users::get_all_user_id(&conn))
         .await
@@ -180,11 +183,6 @@ pub async fn add_recent_reviews(
         insert_reviews.push(_review);
     }
 
-    r2d2_redis::redis::cmd("SET").arg("max_review_id").arg(new_max_id).query(redis_conn.deref_mut()).map_err(|e| {
-        eprintln!("{}", e);
-        HttpResponse::InternalServerError().finish()
-    })?;
-
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -210,12 +208,13 @@ pub async fn add_recent_reviews(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let _timelines = web::block(move || timelines::insert_new_timelines(new_timelines, &conn))
+    let _timelines = web::block(move || timelines::insert_new_timelines_each(new_timelines, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
         })?;
+
+    println!("{:?}", _timelines);
 
     for _tl in &_timelines {
         ws_a.do_send(super::super::ws_actor::ClientMessage {

@@ -1,11 +1,16 @@
 use actix_web::{web, Error, HttpResponse};
-use std::ops::DerefMut;
 use super::super::middleware;
 use super::super::models;
 use super::super::actions::follows;
 use super::super::actions::randomids;
 use super::super::actions::logics::mask;
-use anyhow::{Context};
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FollowWithUser {
+    pub follow: models::Follow,
+    pub user: models::User,
+}
 
 pub async fn post_follows(
     auth: middleware::Authorized,
@@ -22,17 +27,15 @@ pub async fn post_follows(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    println!("{:?}", auth.session_id);
-    if let Some(session_id) = auth.session_id {
-        let followee_id = r2d2_redis::redis::cmd("GET").arg(&format!("session_user:{}", session_id)).query(redis_conn.deref_mut()).map_err(|e| {
-            eprintln!("{:?}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
-
+    if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
         let follower: models::User;
         match web::block(move || randomids::get_user_by_id(follower_id.into_inner(), &conn)).await {
             Ok(user) => follower = user,
             _ => return Ok(HttpResponse::NotFound().body("user not found"))
+        }
+
+        if me.user_id == follower.id {
+            return Ok(HttpResponse::BadRequest().body("follow user is you"))
         }
 
         let conn = pools.db.get().map_err(|_| {
@@ -40,7 +43,7 @@ pub async fn post_follows(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let new_follows = super::super::models::Follow::new(followee_id, follower.id);
+        let new_follows = super::super::models::Follow::new(me.user_id, follower.id);
         // use web::block to offload blocking Diesel code without blocking server thread
         let _follows = web::block(move || follows::insert_new_follow(new_follows, &conn))
             .await
@@ -93,6 +96,7 @@ pub async fn get_followers(
                     is_follower = true;
                 }
             }
+            // フォローしてる人だけじゃなくて自分も見れるように
             if user_id == me.user_id {
                 is_follower = true;
             }
@@ -143,15 +147,44 @@ pub async fn get_follow_request(
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
                 })?;
-            Ok(HttpResponse::Ok().json(follow_requests))
+
+            let mut user_ids: Vec<String> = Vec::new();
+            let mut res: Vec<FollowWithUser> = Vec::new();
+            if let Some(frs) = &follow_requests {
+                for fr in frs {
+                    user_ids.push(fr.followee_id.clone());
+                }
+
+                let conn = pools.db.get().map_err(|_| {
+                    eprintln!("couldn't get db connection from pools");
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+                let masked_users = web::block(move || mask::mask_users_by_ids(user_ids, models::RandomPurpose::FFollow, &conn))
+                    .await
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                for fr in frs {
+                    let mut new_fr = fr.clone();
+                    match masked_users.get(&new_fr.followee_id) {
+                        Some(mu) => {
+                            new_fr.followee_id = mu.id.clone();
+                            res.push(FollowWithUser { follow: new_fr, user: mu.clone() });
+                        },
+                        _ => {}
+                    }
+                }
+            }
+            Ok(HttpResponse::Ok().json(res))
         },
         _ => {
             return Ok(HttpResponse::Unauthorized().body("Please login"))
         }
     }
 }
-
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approval {

@@ -2,6 +2,8 @@ use super::super::super::models;
 use super::super::super::middleware;
 use super::super::super::api::timelines;
 use super::super::super::actions;
+use std::collections::HashMap;
+
 
 use diesel::prelude::*;
 use anyhow::{Context, Result};
@@ -134,13 +136,34 @@ pub fn mask_users(
     purpose: models::RandomPurpose,
     conn: &PgConnection,
 ) -> Result<Vec<models::User>> {
-    let mut user_ids: Vec<uuid::Uuid> = Vec::new();
+    let mut user_ids: Vec<String> = Vec::new();
     for new_user in &input_users {
-        let user_uuid: uuid::Uuid = new_user.id.parse().context("please uuid")?;
-        user_ids.push(user_uuid);
+        user_ids.push(new_user.id.clone());
     }
     let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
 
     println!("{:?}", get_random_ids);
-    Ok(get_random_ids)
+    let mut _users: Vec<models::User> = Vec::new();
+    for (_, u) in get_random_ids {
+        _users.push(u);
+    }
+    Ok(_users)
+}
+
+pub fn mask_users_by_ids(
+    user_ids: Vec<String>,
+    purpose: models::RandomPurpose,
+    conn: &PgConnection,
+) -> Result<std::collections::HashMap<std::string::String, models::User>> {
+
+    let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
+
+    let mut user_maps = HashMap::new();
+    for (rid, u) in get_random_ids {
+        let mut new_user = u;
+        new_user.id = rid.id;
+        user_maps.insert(rid.user_id, new_user);
+    }
+    println!("{:?}", user_maps);
+    Ok(user_maps)
 }

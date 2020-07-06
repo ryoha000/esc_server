@@ -68,33 +68,35 @@ pub fn get_randomid_by_user_id (
 }
 
 pub fn get_user_by_id (
-    id: uuid::Uuid,
+    r_uuid: uuid::Uuid,
     conn: &PgConnection,
 ) -> Result<models::User, diesel::result::Error> {
-    let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE randomids.id = \'{}\';", id.to_string());
-    let user: Vec<models::User> = diesel::sql_query(query).load(conn)?;
+    use crate::schema::randomids::dsl::*;
+    use crate::schema::users::dsl::*;
+    let _user = randomids
+        .inner_join(users)
+        .filter(crate::schema::randomids::id.eq(r_uuid.to_string()))
+        .first::<(models::Randomid, models::User)>(conn)
+        .optional()?;
 
-    match user.get(0) {
-        Some(user) => Ok(user.clone()),
+    match _user {
+        Some((_, user)) => Ok(user),
         None => Err(diesel::result::Error::NotFound)
     }
 }
 
 pub fn get_randomids_by_user_ids (
-    search_user_ids: Vec<uuid::Uuid>,
+    search_user_ids: Vec<String>,
     search_purpose: i32,
     conn: &PgConnection,
-) -> Result<Vec<models::User>, diesel::result::Error> {
-    let mut where_query = String::new();
-    let _len = search_user_ids.len();
-    for (i, id) in search_user_ids.iter().enumerate() {
-        if i == _len - 1 {
-            where_query.push_str(&(format!("user_id = \'{}\'", id.to_string())))
-        } else {
-            where_query.push_str(&(format!("user_id = \'{}\' OR ", id.to_string())))
-        }
-    }
-    let query = format!("SELECT randomids.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id from users inner join randomids on randomids.user_id = users.id WHERE purpose = {} AND ( {} );", search_purpose, where_query);
-    let ids: Vec<models::User> = diesel::sql_query(query).load(conn)?;
-    Ok(ids)
+) -> Result<Vec<(models::Randomid, models::User)>, diesel::result::Error> {
+    use crate::schema::randomids::dsl::*;
+    use crate::schema::users::dsl::*;
+
+    let rid_users = randomids
+        .inner_join(users)
+        .filter(user_id.eq_any(search_user_ids))
+        .load::<(models::Randomid, models::User)>(conn)?;
+
+    Ok(rid_users)
 }
