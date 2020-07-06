@@ -67,6 +67,20 @@ impl User {
             icon_url: None,
         }
     }
+    pub fn light_annonymus(randomid: String, user: User) -> User {
+        User {
+            id: randomid,
+            es_user_id: user.es_user_id,
+            display_name: user.display_name,
+            comment: user.comment,
+            show_all_users: user.show_all_users,
+            show_detail_all_users: user.show_detail_all_users,
+            show_followers: user.show_followers,
+            show_followers_okazu: user.show_followers_okazu,
+            twitter_id: user.twitter_id,
+            icon_url: user.icon_url,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Queryable, Insertable)]

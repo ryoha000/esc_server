@@ -65,70 +65,69 @@ pub fn mask_timeline(
     // 匿名化する場合のidを取得
     let random_id = actions::randomids::get_randomid_by_user_id(res_tl.user_id.clone(), models::RandomPurpose::FTimeline as i32, conn)?;
 
+    let mut is_follow: bool = false;
     match me {
         Some(_me) => {
             let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
-            let followees = actions::follows::find_followees_by_uid(my_uuid, conn)?;
 
-            // action主のfollowerかどうか確認
-            let mut is_follow = false;
-            for flee in &followees {
-                if res_tl.user_id.clone() == flee.id {
-                    is_follow = true;
+            if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
+                // action主のfollowerかどうか確認
+                for flee in &followees {
+                    if res_tl.user_id.clone() == flee.id {
+                        is_follow = true;
+                    }
                 }
             }
+        }
+        _ => {}
+    }
 
-            let mut user = models::User::annonymus(random_id.id.clone(), String::from(""));
-            match is_follow {
-                true => {
-                    if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
-                        user = getted_user;
-                    }
-                },
-                false => {
-                    res_tl.user_id = random_id.id.clone();
-                }
+    let mut user = models::User::annonymus(random_id.id.clone(), String::from(""));
+    match is_follow {
+        true => {
+            if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
+                user = getted_user;
             }
-
-            // reviewかListを挿入
-            let mut _review: Option<models::Review> = None;
-            let mut _list: Option<models::List> = None;
-            match res_tl.log_type.clone() {
-                // Play => 0, Review => 1, List = 2
-                1 => {
-                    if let Some((_reviewlog, found_review)) = actions::reviewlogs::find_review_by_timeline_id(timeline_id.clone(), conn)? {
-                        let mut assign_review = found_review;
-                        if !is_follow {
-                            assign_review.user_id = random_id.id;
-                        }
-                        _review = Some(assign_review);
-                    }
-                },
-                2 => {
-                    if let Some((_listlog, found_list)) = actions::listlogs::find_list_by_timeline_id(timeline_id, conn)? {
-                        let mut assign_list = found_list;
-                        if !is_follow {
-                            assign_list.user_id = random_id.id;
-                        }
-                        _list = Some(assign_list);
-                    }
-                },
-                _ => {}
-            }
-
-            // MaskedTimelineを返す
-            Ok(timelines::MaskedTimeline {
-                timeline: res_tl,
-                list: _list,
-                review: _review,
-                game: res_game,
-                user: user
-            })
         },
-        _ => {
-            anyhow::bail!("somethin went wrong")
+        false => {
+            res_tl.user_id = random_id.id.clone();
         }
     }
+
+    // reviewかListを挿入
+    let mut _review: Option<models::Review> = None;
+    let mut _list: Option<models::List> = None;
+    match res_tl.log_type.clone() {
+        // Play => 0, Review => 1, List = 2
+        1 => {
+            if let Some((_reviewlog, found_review)) = actions::reviewlogs::find_review_by_timeline_id(timeline_id.clone(), conn)? {
+                let mut assign_review = found_review;
+                if !is_follow {
+                    assign_review.user_id = random_id.id;
+                }
+                _review = Some(assign_review);
+            }
+        },
+        2 => {
+            if let Some((_listlog, found_list)) = actions::listlogs::find_list_by_timeline_id(timeline_id, conn)? {
+                let mut assign_list = found_list;
+                if !is_follow {
+                    assign_list.user_id = random_id.id;
+                }
+                _list = Some(assign_list);
+            }
+        },
+        _ => {}
+    }
+
+    // MaskedTimelineを返す
+    Ok(timelines::MaskedTimeline {
+        timeline: res_tl,
+        list: _list,
+        review: _review,
+        game: res_game,
+        user: user
+    })
 }
 
 pub fn mask_users(
@@ -142,10 +141,9 @@ pub fn mask_users(
     }
     let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
 
-    println!("{:?}", get_random_ids);
     let mut _users: Vec<models::User> = Vec::new();
-    for (_, u) in get_random_ids {
-        _users.push(u);
+    for (r, u) in get_random_ids {
+        _users.push(models::User::light_annonymus(r.id, u));
     }
     Ok(_users)
 }
@@ -164,6 +162,31 @@ pub fn mask_users_by_ids(
         new_user.id = rid.id;
         user_maps.insert(rid.user_id, new_user);
     }
-    println!("{:?}", user_maps);
     Ok(user_maps)
+}
+
+pub fn find_wanna_mask_userids(
+    me_id: &str,
+    followees: &Vec<models::User>,
+    unmasked_users: Vec<models::User>,
+) -> (Vec<models::User>, Vec<models::User>) {
+    let mut necessary_mask_users: Vec<models::User> = Vec::new();
+    let mut unnecessary_mask_users: Vec<models::User> =Vec::new();
+    for uuser in unmasked_users {
+        let mut is_follow = false;
+        for fee in followees {
+            if fee.id == uuser.id {
+                is_follow = true;
+            }
+            if fee.id == me_id {
+                is_follow =  true;
+            }
+        }
+        if !is_follow {
+            necessary_mask_users.push(uuser);
+        } else {
+            unnecessary_mask_users.push(uuser);
+        }
+    }
+    (necessary_mask_users, unnecessary_mask_users)
 }

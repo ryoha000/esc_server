@@ -96,6 +96,7 @@ pub fn get_randomids_by_user_ids (
     let rid_users = randomids
         .inner_join(users)
         .filter(user_id.eq_any(search_user_ids))
+        .filter(purpose.eq(search_purpose))
         .load::<(models::Randomid, models::User)>(conn)?;
 
     Ok(rid_users)

@@ -100,7 +100,9 @@ pub async fn get_followers(
             if user_id == me.user_id {
                 is_follower = true;
             }
-            if !is_follower { return Ok(HttpResponse::Forbidden().body("you did not follow this user"))}
+            if !is_follower {
+                return Ok(HttpResponse::Forbidden().body("you did not follow this user"))
+            }
 
             let conn = pools.db.get().map_err(|_| {
                 eprintln!("couldn't get db connection from pools");
@@ -121,7 +123,102 @@ pub async fn get_followers(
     } else {
         Ok(HttpResponse::Unauthorized().body("Please login"))
     }
+}
 
+pub async fn get_followees(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    user_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let user_id = user_id.into_inner();
+    let user_uuid: uuid::Uuid;
+    match user_id.parse::<uuid::Uuid>() {
+        Ok(u_uuid) => user_uuid = u_uuid,
+        _ => return Ok(HttpResponse::BadRequest().body("please enter a uuid"))
+    }
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _followees = web::block(move || follows::find_followees_by_uid(user_uuid, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    let optionnal_me = middleware::check_user(auth, &mut redis_conn);
+
+    // mask処理
+    if let Some(followees) = _followees {
+        let mut necessary_mask_users: Vec<models::User> = Vec::new();
+        let mut unnecessary_mask_users: Vec<models::User> = Vec::new();
+
+        // maskする必要のあるUserと、必要のないUserで分離
+        if let Some(me) = optionnal_me {
+            // もし自分ならmaskせずにreturn
+            if user_id != me.user_id {
+                return Ok(HttpResponse::Ok().json(followees))
+            }
+            // 自分がFollowしてるユーザーを取得
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            let me_uuid: uuid::Uuid;
+            match me.user_id.parse::<uuid::Uuid>() {
+                Ok(u_uuid) => me_uuid = u_uuid,
+                _ => return Ok(HttpResponse::BadRequest().body("bad request"))
+            }
+
+            let _my_followees = web::block(move || follows::find_followees_by_uid(me_uuid, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            match _my_followees {
+                Some(my_followees) => {
+                    let _tupple = mask::find_wanna_mask_userids(&me.user_id, &my_followees, followees);
+                    necessary_mask_users = _tupple.0;
+                    unnecessary_mask_users = _tupple.1;
+                },
+                _ => {
+                    necessary_mask_users = followees;
+                }
+            }
+        } else {
+            necessary_mask_users = followees;
+        }
+
+        // mask処理
+        let conn = pools.db.get().map_err(|_| {
+            eprintln!("couldn't get db connection from pools");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+        let mut masked_users = web::block(move || mask::mask_users(necessary_mask_users, models::RandomPurpose::FFollow, &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+        unnecessary_mask_users.append(&mut masked_users);
+
+        return Ok(HttpResponse::Ok().json(unnecessary_mask_users))
+    } else {
+        Ok(HttpResponse::BadRequest().body("bad request"))
+    }
 }
 
 pub async fn get_follow_request(
