@@ -103,3 +103,24 @@ pub fn find_timelines_with_game_of_limit20(
 
     Ok(res)
 }
+
+pub fn find_timelines_with_game_by_user_id_and_type_with_limit(
+    _user_id: String,
+    _log_type: i32,
+    _limit: i64,
+    conn: &PgConnection,
+) -> Result<Option<Vec<(models::Timeline, models::Game)>>, diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+    use crate::schema::timelines::dsl::*;
+
+    let res = timelines
+        .inner_join(games)
+        .order(crate::schema::timelines::created_at.desc())
+        .filter(user_id.eq(_user_id)
+            .and(log_type.eq(_log_type)))
+        .limit(_limit)
+        .load::<(models::Timeline, models::Game)>(conn)
+        .optional()?;
+
+    Ok(res)
+}

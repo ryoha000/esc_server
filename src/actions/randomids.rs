@@ -85,7 +85,25 @@ pub fn get_user_by_id (
     }
 }
 
-pub fn get_randomids_by_user_ids (
+pub fn get_randomid_with_user_by_user_id (
+    search_user_id: String,
+    search_purpose: i32,
+    conn: &PgConnection,
+) -> Result<Option<(models::Randomid, models::User)>, diesel::result::Error> {
+    use crate::schema::randomids::dsl::*;
+    use crate::schema::users::dsl::*;
+
+    let rid_users = randomids
+        .inner_join(users)
+        .filter(user_id.eq(search_user_id))
+        .filter(purpose.eq(search_purpose))
+        .first::<(models::Randomid, models::User)>(conn)
+        .optional()?;
+
+    Ok(rid_users)
+}
+
+pub fn get_randomids_with_users_by_user_ids (
     search_user_ids: Vec<String>,
     search_purpose: i32,
     conn: &PgConnection,

@@ -130,6 +130,17 @@ pub fn mask_timeline(
     })
 }
 
+pub fn mask_user(
+    input_user: models::User,
+    purpose: models::RandomPurpose,
+    conn: &PgConnection,
+) -> Result<models::User> {
+    let get_random_id = actions::randomids::get_randomid_by_user_id(input_user.id.clone(), purpose as i32, conn)?;
+
+    let _user = models::User::light_annonymus(get_random_id.id, input_user);
+    Ok(_user)
+}
+
 pub fn mask_users(
     input_users: Vec<models::User>,
     purpose: models::RandomPurpose,
@@ -139,7 +150,7 @@ pub fn mask_users(
     for new_user in &input_users {
         user_ids.push(new_user.id.clone());
     }
-    let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
+    let get_random_ids = actions::randomids::get_randomids_with_users_by_user_ids(user_ids, purpose as i32, conn)?;
 
     let mut _users: Vec<models::User> = Vec::new();
     for (r, u) in get_random_ids {
@@ -148,13 +159,26 @@ pub fn mask_users(
     Ok(_users)
 }
 
+pub fn mask_user_by_id(
+    user_id: String,
+    purpose: models::RandomPurpose,
+    conn: &PgConnection,
+) -> Result<models::User> {
+    let random_id_with_user = actions::randomids::get_randomid_with_user_by_user_id(user_id, purpose as i32, conn)?;
+
+    match random_id_with_user {
+        Some((rid, u)) => Ok(models::User::light_annonymus(rid.id, u)),
+        _ => anyhow::bail!("timeline not found")
+    }
+}
+
 pub fn mask_users_by_ids(
     user_ids: Vec<String>,
     purpose: models::RandomPurpose,
     conn: &PgConnection,
 ) -> Result<std::collections::HashMap<std::string::String, models::User>> {
 
-    let get_random_ids = actions::randomids::get_randomids_by_user_ids(user_ids, purpose as i32, conn)?;
+    let get_random_ids = actions::randomids::get_randomids_with_users_by_user_ids(user_ids, purpose as i32, conn)?;
 
     let mut user_maps = HashMap::new();
     for (rid, u) in get_random_ids {
