@@ -43,6 +43,28 @@ pub async fn post_follows(
             HttpResponse::InternalServerError().finish()
         })?;
 
+        // 既に対応されてないフォロリクあるなら400
+        let fid = follower.id.clone();
+        let follow_requests = web::block(move || follows::get_unapprove_follows_follower_id(fid, &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+        if let Some(frs) = follow_requests {
+            for fr in frs {
+                if fr.followee_id == me.user_id {
+                    return Ok(HttpResponse::BadRequest().body("you are already send follow request"))
+                }
+            }
+        }
+
+        let conn = pools.db.get().map_err(|_| {
+            eprintln!("couldn't get db connection from pools");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
         let new_follows = super::super::models::Follow::new(me.user_id, follower.id);
         // use web::block to offload blocking Diesel code without blocking server thread
         let _follows = web::block(move || follows::insert_new_follow(new_follows, &conn))
@@ -302,6 +324,68 @@ pub async fn get_follow_request(
                     match masked_users.get(&new_fr.followee_id) {
                         Some(mu) => {
                             new_fr.followee_id = mu.id.clone();
+                            res.push(FollowWithUser { follow: new_fr, user: mu.clone() });
+                        },
+                        _ => {}
+                    }
+                }
+            }
+            Ok(HttpResponse::Ok().json(res))
+        },
+        _ => {
+            return Ok(HttpResponse::Unauthorized().body("Please login"))
+        }
+    }
+}
+
+pub async fn get_my_follow_request(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            // フォローリクエストの取得
+            let follow_requests = web::block(move || follows::get_all_follows_followee_id(me.user_id, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            let mut user_ids: Vec<String> = Vec::new();
+            let mut res: Vec<FollowWithUser> = Vec::new();
+            if let Some(frs) = &follow_requests {
+                for fr in frs {
+                    user_ids.push(fr.follower_id.clone());
+                }
+
+                let conn = pools.db.get().map_err(|_| {
+                    eprintln!("couldn't get db connection from pools");
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+                let masked_users = web::block(move || mask::mask_users_by_ids(user_ids, models::RandomPurpose::FFollow, &conn))
+                    .await
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                for fr in frs {
+                    let mut new_fr = fr.clone();
+                    match masked_users.get(&new_fr.follower_id) {
+                        Some(mu) => {
+                            new_fr.follower_id = mu.id.clone();
                             res.push(FollowWithUser { follow: new_fr, user: mu.clone() });
                         },
                         _ => {}

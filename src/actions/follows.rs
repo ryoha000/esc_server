@@ -117,3 +117,17 @@ pub fn get_unapprove_follows_follower_id(
     println!("{:?}", follow_requests);
     Ok(follow_requests)
 }
+
+pub fn get_all_follows_followee_id(
+    followee_user_id: String,
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::Follow>>, diesel::result::Error> {
+    use crate::schema::follows::dsl::*;
+
+    let follow_requests = follows
+        .filter(followee_id.eq(followee_user_id))
+        .load::<models::Follow>(conn)
+        .optional()?;
+
+    Ok(follow_requests)
+}
