@@ -106,15 +106,14 @@ pub fn get_unapprove_follows_follower_id(
     use crate::schema::follows::dsl::*;
     let search_deleted_at: Option<chrono::NaiveDateTime> = None;
 
-    println!("{:?}", follower_user_id);
     let follow_requests = follows
+        .order(created_at.asc())
         .filter(follower_id.eq(follower_user_id)
             .and(allowed.eq(false))
             .and(deleted_at.is_not_distinct_from(search_deleted_at)))
         .load::<models::Follow>(conn)
         .optional()?;
 
-    println!("{:?}", follow_requests);
     Ok(follow_requests)
 }
 
@@ -126,6 +125,24 @@ pub fn get_all_follows_followee_id(
 
     let follow_requests = follows
         .filter(followee_id.eq(followee_user_id))
+        .load::<models::Follow>(conn)
+        .optional()?;
+
+    Ok(follow_requests)
+}
+
+pub fn get_undeleted_follows_by_followee_id_and_follower_id(
+    followee_user_id: String,
+    follower_user_id: String,
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::Follow>>, diesel::result::Error> {
+    use crate::schema::follows::dsl::*;
+    let search_deleted_at: Option<chrono::NaiveDateTime> = None;
+
+    let follow_requests = follows
+        .filter(followee_id.eq(followee_user_id)
+            .and(follower_id.eq(follower_user_id))
+            .and(deleted_at.is_not_distinct_from(search_deleted_at)))
         .load::<models::Follow>(conn)
         .optional()?;
 

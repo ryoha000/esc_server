@@ -168,7 +168,7 @@ pub fn mask_user_by_id(
 
     match random_id_with_user {
         Some((rid, u)) => Ok(models::User::light_annonymus(rid.id, u)),
-        _ => anyhow::bail!("timeline not found")
+        _ => anyhow::bail!("masked user not found")
     }
 }
 

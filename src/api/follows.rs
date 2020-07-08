@@ -45,7 +45,8 @@ pub async fn post_follows(
 
         // 既に対応されてないフォロリクあるなら400
         let fid = follower.id.clone();
-        let follow_requests = web::block(move || follows::get_unapprove_follows_follower_id(fid, &conn))
+        let my_id = me.user_id.clone();
+        let follow_requests = web::block(move || follows::get_undeleted_follows_by_followee_id_and_follower_id(me.user_id, fid, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
@@ -53,10 +54,8 @@ pub async fn post_follows(
             })?;
 
         if let Some(frs) = follow_requests {
-            for fr in frs {
-                if fr.followee_id == me.user_id {
-                    return Ok(HttpResponse::BadRequest().body("you are already send follow request"))
-                }
+            if frs.len() != 0 {
+                return Ok(HttpResponse::BadRequest().body("you are already send follow request"))
             }
         }
 
@@ -65,7 +64,7 @@ pub async fn post_follows(
             HttpResponse::InternalServerError().finish()
         })?;
 
-        let new_follows = super::super::models::Follow::new(me.user_id, follower.id);
+        let new_follows = super::super::models::Follow::new(my_id, follower.id);
         // use web::block to offload blocking Diesel code without blocking server thread
         let _follows = web::block(move || follows::insert_new_follow(new_follows, &conn))
             .await

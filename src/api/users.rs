@@ -178,7 +178,8 @@ pub async fn get_user_detail(
 
     // とりあえずuserを取得
     if !is_follow {
-        search_user = web::block(move || mask::mask_user_by_id(_user_uid.to_string(), models::RandomPurpose::FDirect, &conn))
+        let s_id = search_randomid.user_id.clone();
+        search_user = web::block(move || mask::mask_user_by_id(s_id, models::RandomPurpose::FDirect, &conn))
             .await
             .map_err(|e| {
                 eprintln!("{}", e);
@@ -231,7 +232,8 @@ pub async fn get_user_detail(
                 eprintln!("couldn't get db connection from pools");
                 HttpResponse::InternalServerError().finish()
             }) {
-                let mut _tl_with_g_vec_result = web::block(move || timelines::find_timelines_with_game_by_user_id_and_type_with_limit(_user_uid.to_string(), i, limit_num, &conn))
+                let s_id = search_randomid.user_id.clone();
+                let mut _tl_with_g_vec_result = web::block(move || timelines::find_timelines_with_game_by_user_id_and_type_with_limit(s_id, i, limit_num, &conn))
                     .await
                     .map_err(|e| {
                         eprintln!("{}", e);
