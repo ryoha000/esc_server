@@ -117,14 +117,18 @@ pub async fn get_lists(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    let lists = web::block(move || lists::find_lists(&conn))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
-
-    Ok(HttpResponse::Ok().json(lists))
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            let lists = web::block(move || lists::find_simple_lists_by_user_id(me.user_id, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            Ok(HttpResponse::Ok().json(lists))
+        },
+        _ => return Ok(HttpResponse::Unauthorized().body("please login"))
+    }
 }
 
 pub async fn get_list(

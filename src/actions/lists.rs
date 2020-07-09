@@ -58,6 +58,20 @@ pub fn find_simple_list_by_uid(
     Ok(list)
 }
 
+pub fn find_simple_lists_by_user_id(
+    search_user_id: String,
+    conn: &PgConnection,
+) -> Result<Option<Vec<models::List>>, diesel::result::Error> {
+    use crate::schema::lists::dsl::*;
+
+    let list = lists
+        .filter(user_id.eq(search_user_id))
+        .load::<models::List>(conn)
+        .optional()?;
+
+    Ok(list)
+}
+
 pub fn find_lists(
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::List>>, diesel::result::Error> {
