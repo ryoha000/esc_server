@@ -13,6 +13,11 @@ pub struct AddGamesList {
     pub game_ids: Vec<i32>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PutListStruct {
+    pub list_map_ids: Vec<String>,
+}
+
 pub async fn add_game_list(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
@@ -40,7 +45,7 @@ pub async fn add_game_list(
                 HttpResponse::InternalServerError().finish()
             })?;
 
-            match web::block(move || lists::find_simple_list_by_uid(list_id, &conn))
+            match web::block(move || lists::find_simple_list_by_uid(list_uid.to_string(), &conn))
                 .await
                 .map_err(|e| {
                     eprintln!("{}", e);
@@ -74,49 +79,110 @@ pub async fn add_game_list(
                             HttpResponse::InternalServerError().finish()
                         })?;
 
-                    // // 新しいTimeline の配列、フォローしてる人だけ見えるようにしようと思ったけどむずいからコメントアウト
-                    // let mut new_timelines: Vec<models::Timeline> = Vec::new();
+                    // 新しいTimeline の配列、フォローしてる人だけ見えるようにしようと思ったけどむずいからコメントアウト
+                    let mut new_timelines: Vec<models::Timeline> = Vec::new();
 
-                    // let conn = pools.db.get().map_err(|_| {
-                    //     eprintln!("couldn't get db connection from pools");
-                    //     HttpResponse::InternalServerError().finish()
-                    // })?;
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
 
-                    // for _lm in _listmaps {
-                    //     let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, models::LogType::List as i32);
-                    //     new_timelines.push(new_timeline);
-                    // }
+                    for _lm in _listmaps {
+                        let new_timeline = models::Timeline::new(me.user_id.clone(), _lm.game_id, models::LogType::List as i32);
+                        new_timelines.push(new_timeline);
+                    }
 
-                    // let _timelines = web::block(move || timelines::insert_new_timelines(new_timelines, &conn))
-                    //     .await
-                    //     .map_err(|e| {
-                    //         eprintln!("{}", e);
-                    //         HttpResponse::InternalServerError().finish()
-                    //     })?;
+                    let _timelines = web::block(move || timelines::insert_new_timelines(new_timelines, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
 
-                    // let mut new_listlogs: Vec<models::Listlog> = Vec::new();
+                    let mut new_listlogs: Vec<models::Listlog> = Vec::new();
 
-                    // for _tl in _timelines {
-                    //     ws_a.do_send(super::super::ws_actor::ClientMessage {
-                    //         id: 0,
-                    //         msg: _tl.id.clone(),
-                    //     });
-                    //     new_listlogs.push(models::Listlog::new(_tl.id, list_id.clone()));
-                    // }
+                    for _tl in _timelines {
+                        ws_a.do_send(super::super::ws_actor::ClientMessage {
+                            id: 0,
+                            msg: _tl.id.clone(),
+                        });
+                        new_listlogs.push(models::Listlog::new(_tl.id, list_id.clone()));
+                    }
 
-                    // let conn = pools.db.get().map_err(|_| {
-                    //     eprintln!("couldn't get db connection from pools");
-                    //     HttpResponse::InternalServerError().finish()
-                    // })?;
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
 
-                    // let _ = web::block(move || listlogs::insert_new_listlogs(new_listlogs, &conn))
-                    //     .await
-                    //     .map_err(|e| {
-                    //         eprintln!("{}", e);
-                    //         HttpResponse::InternalServerError().finish()
-                    //     })?;
+                    let _ = web::block(move || listlogs::insert_new_listlogs(new_listlogs, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
 
-                    return Ok(HttpResponse::Created().json(_listmaps))
+                    return Ok(HttpResponse::Created().body("game added"))
+                },
+                _ => {
+                    let res = HttpResponse::NotFound().body("not found");
+                    return Ok(res)
+                }
+            }
+
+        },
+        _ => {
+            let res = HttpResponse::Unauthorized().body("Please login");
+            return Ok(res)
+        }
+    }
+}
+
+pub async fn delete_game_list(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<PutListStruct>,
+    list_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            let list_id: String = list_id.into_inner();
+            let list_id_clone = list_id.clone();
+
+            match web::block(move || lists::find_simple_list_by_uid(list_id_clone, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })? {
+
+                Some(_list) => {
+                    if me.user_id != _list.user_id {
+                        return Ok(HttpResponse::Forbidden().body("this list owner is not you"))
+                    }
+
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                    web::block(move || listmaps::delete_listmaps_by_list_id_and_list_map_ids(list_id, form.list_map_ids.clone(), &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+
+                    return Ok(HttpResponse::Ok().body("games removed"))
                 },
                 _ => {
                     let res = HttpResponse::NotFound().body("not found");

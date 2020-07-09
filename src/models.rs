@@ -296,7 +296,7 @@ impl List {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName, AsChangeset)]
 #[table_name = "listmaps"]
 #[belongs_to(List)]
 #[belongs_to(Game)]
