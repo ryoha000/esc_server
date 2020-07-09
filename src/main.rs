@@ -196,6 +196,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/lists", web::post().to(api::lists::post_list))
                 .route("/lists/{list_id}", web::get().to(api::lists::get_list))
                 .route("/lists/{list_id}", web::post().to(api::listmaps::add_game_list))
+                .route("/lists/{list_id}", web::put().to(api::lists::put_list))
 
                 .route("/reviews", web::post().to(api::reviews::add_recent_reviews))
                 .route("/reviews", web::get().to(api::reviews::get_reviews))

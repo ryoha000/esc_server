@@ -23,26 +23,35 @@ pub fn find_list_by_uid(
         .first::<models::List>(conn)
         .optional()?;
 
-    // let list = lists
-    //     .filter(id.eq(uid.to_string()))
-    //     .first::<models::List>(conn)
-    //     .optional()?;
-
     let res = ListWithGames {
         list: list,
         games: games
     };
+
     Ok(res)
 }
 
+pub fn update_list_by_id(
+    new_list: &models::List,
+    conn: &PgConnection,
+) -> Result<Vec<models::List>, diesel::result::Error> {
+    use crate::schema::lists::dsl::*;
+
+    let update_row = diesel::update(lists.filter(id.eq(new_list.id.clone())))
+        .set(new_list)
+        .load::<models::List>(conn)?;
+
+    Ok(update_row)
+}
+
 pub fn find_simple_list_by_uid(
-    uid: Uuid,
+    uid: String,
     conn: &PgConnection,
 ) -> Result<Option<models::List>, diesel::result::Error> {
     use crate::schema::lists::dsl::*;
 
     let list = lists
-        .filter(id.eq(uid.to_string()))
+        .filter(id.eq(uid))
         .first::<models::List>(conn)
         .optional()?;
 

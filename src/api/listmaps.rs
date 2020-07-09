@@ -40,7 +40,7 @@ pub async fn add_game_list(
                 HttpResponse::InternalServerError().finish()
             })?;
 
-            match web::block(move || lists::find_simple_list_by_uid(list_uid, &conn))
+            match web::block(move || lists::find_simple_list_by_uid(list_id, &conn))
                 .await
                 .map_err(|e| {
                     eprintln!("{}", e);

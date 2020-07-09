@@ -265,7 +265,7 @@ impl Follow {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName)]
+#[derive(Debug, Clone, Serialize, Queryable, Associations, Insertable, QueryableByName, AsChangeset)]
 #[table_name = "lists"]
 #[belongs_to(User)]
 pub struct List {
@@ -281,15 +281,15 @@ pub struct List {
 }
 
 impl List {
-    pub fn new(user_id: String, name: String, comment: String) -> List {
+    pub fn new(user_id: String, name: String, comment: String, priority: i32, url: Option<String>, is_public: bool) -> List {
         List {
             id: Uuid::new_v4().to_string(),
             user_id: user_id,
             name: name,
             comment: comment,
-            priority: 0,
-            url: None,
-            is_public: true,
+            priority: priority,
+            url: url,
+            is_public: is_public,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
             updated_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
         }

@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 pub struct PostList {
     pub name: String,
     pub comment: String,
+    pub priority: i32,
+    pub url: Option<String>,
+    pub is_public: bool,
 }
 
 pub async fn post_list(
@@ -27,7 +30,7 @@ pub async fn post_list(
 
     match middleware::check_user(auth, &mut redis_conn) {
         Some(me) => {
-            let new_list = models::List::new(me.user_id, form.name.clone(), form.comment.clone());
+            let new_list = models::List::new(me.user_id, form.name.clone(), form.comment.clone(), form.priority, form.url.clone(), form.is_public);
             let _list = web::block(move || lists::insert_new_list(new_list, &conn))
                 .await
                 .map_err(|e| {
@@ -36,6 +39,62 @@ pub async fn post_list(
                 })?;
             
             return Ok(HttpResponse::Ok().json(_list))
+        },
+        _ => {
+            let res = HttpResponse::Unauthorized().body("Please login");
+            return Ok(res)
+        }
+    }
+}
+
+pub async fn put_list(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<PostList>,
+    list_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            let _prev_list = web::block(move || lists::find_simple_list_by_uid(list_id.into_inner(), &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            if let Some(prev_list) = _prev_list {
+                if prev_list.user_id != me.user_id {
+                    return Ok(HttpResponse::Forbidden().body("this list owner is not you"))
+                }
+                let mut new_list = models::List::new(me.user_id, form.name.clone(), form.comment.clone(), form.priority, form.url.clone(), form.is_public);
+                new_list.id = prev_list.id;
+                new_list.created_at = prev_list.created_at;
+
+                let conn = pools.db.get().map_err(|_| {
+                    eprintln!("couldn't get db connection from pools");
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+                let _list = web::block(move || lists::update_list_by_id(&new_list, &conn))
+                    .await
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+                
+                return Ok(HttpResponse::Ok().json(_list.get(0)))
+            }
+            return Ok(HttpResponse::NotFound().body("list is not found"))
         },
         _ => {
             let res = HttpResponse::Unauthorized().body("Please login");
