@@ -40,12 +40,32 @@ pub async fn add_game_list(
                 HttpResponse::InternalServerError().finish()
             })?;
 
-            match web::block(move || lists::find_simple_list_by_uid(list_uid.to_string(), &conn))
+            let list_with_game = web::block(move || lists::find_list_by_uid(list_uid, &conn))
                 .await
                 .map_err(|e| {
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
-                })? {
+                })?;
+
+            let mut insert_games: Vec<i32> = Vec::new();
+            match list_with_game.games {
+                Some(games) => {
+                    for in_g in &form.game_ids {
+                        let mut exist = false;
+                        for al_g in &games {
+                            if &al_g.id == in_g {
+                                exist = true;
+                            }
+                        }
+                        if !exist {
+                            insert_games.push(in_g.clone());
+                        }
+                    }
+                },
+                _ => insert_games = form.game_ids.clone()
+            }
+
+            match list_with_game.list {
 
                 Some(_list) => {
                     if me.user_id != _list.user_id {
@@ -53,7 +73,7 @@ pub async fn add_game_list(
                     }
                     
                     let mut new_listmaps: Vec<models::Listmap> = Vec::new();
-                    for id in form.game_ids.clone() {
+                    for id in insert_games {
                         let _listmap =  models::Listmap {
                             id: uuid::Uuid::new_v4().to_string(),
                             game_id: id,
@@ -153,13 +173,14 @@ pub async fn delete_game_list(
             let list_id: String = list_id.into_inner();
             let list_id_clone = list_id.clone();
 
-            match web::block(move || lists::find_simple_list_by_uid(list_id_clone, &conn))
+            let list = web::block(move || lists::find_simple_list_by_uid(list_id_clone, &conn))
                 .await
                 .map_err(|e| {
                     eprintln!("{}", e);
                     HttpResponse::InternalServerError().finish()
-                })? {
+                })?;
 
+            match list {
                 Some(_list) => {
                     if me.user_id != _list.user_id {
                         return Ok(HttpResponse::Forbidden().body("this list owner is not you"))

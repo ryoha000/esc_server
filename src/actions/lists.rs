@@ -5,8 +5,8 @@ use serde::{Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ListWithGames {
-    list: Option<models::List>,
-    games: Option<Vec<models::Game>>,
+    pub list: Option<models::List>,
+    pub games: Option<Vec<models::Game>>,
 }
 
 pub fn find_list_by_uid(
