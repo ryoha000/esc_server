@@ -103,6 +103,55 @@ pub async fn put_list(
     }
 }
 
+pub async fn delete_list(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    list_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let list_str = list_id.into_inner();
+    let list_str_clone = list_str.clone();
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            let _list = web::block(move || lists::find_simple_list_by_uid(list_str, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            if let Some(list) = _list {
+                if list.user_id == me.user_id {
+                    let conn = pools.db.get().map_err(|_| {
+                        eprintln!("couldn't get db connection from pools");
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                    let deleted_lists = web::block(move || lists::delete_list_by_id(list_str_clone, &conn))
+                        .await
+                        .map_err(|e| {
+                            eprintln!("{}", e);
+                            HttpResponse::InternalServerError().finish()
+                        })?;
+                    return Ok(HttpResponse::Ok().json(deleted_lists))
+                }
+                Ok(HttpResponse::Forbidden().body("this list owner is not you"))
+            } else {
+                Ok(HttpResponse::NotFound().body("list is not found"))
+            }
+        },
+        _ => return Ok(HttpResponse::Unauthorized().body("please login"))
+    }
+}
+
 pub async fn get_lists(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,

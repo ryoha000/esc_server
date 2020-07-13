@@ -13,11 +13,6 @@ pub struct AddGamesList {
     pub game_ids: Vec<i32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PutListStruct {
-    pub list_map_ids: Vec<String>,
-}
-
 pub async fn add_game_list(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
@@ -140,7 +135,7 @@ pub async fn add_game_list(
 pub async fn delete_game_list(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
-    form: web::Json<PutListStruct>,
+    form: web::Json<AddGamesList>,
     list_id: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
     let conn = pools.db.get().map_err(|_| {
@@ -175,7 +170,7 @@ pub async fn delete_game_list(
                         HttpResponse::InternalServerError().finish()
                     })?;
 
-                    web::block(move || listmaps::delete_listmaps_by_list_id_and_list_map_ids(list_id, form.list_map_ids.clone(), &conn))
+                    web::block(move || listmaps::delete_listmaps_by_list_id_and_list_map_ids(list_id, form.game_ids.clone(), &conn))
                         .await
                         .map_err(|e| {
                             eprintln!("{}", e);

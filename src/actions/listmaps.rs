@@ -53,12 +53,12 @@ pub fn insert_new_listmaps(
 
 pub fn delete_listmaps_by_list_id_and_list_map_ids(
     delete_list_id: String,
-    list_map_ids: Vec<String>,
+    game_ids: Vec<i32>,
     conn: &PgConnection,
 ) -> Result<(), diesel::result::Error> {
     use crate::schema::listmaps::dsl::*;
 
-    diesel::delete(listmaps.filter(id.eq_any(list_map_ids).and(list_id.eq(delete_list_id)))).execute(conn)?;
+    diesel::delete(listmaps.filter(game_id.eq_any(game_ids).and(list_id.eq(delete_list_id)))).execute(conn)?;
 
     Ok(())
 }

@@ -278,6 +278,7 @@ pub struct List {
     pub is_public: bool,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
 }
 
 impl List {
@@ -292,6 +293,7 @@ impl List {
             is_public: is_public,
             created_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
             updated_at: chrono::NaiveDateTime::from_timestamp(chrono::Local::now().timestamp(), 0),
+            deleted_at: None,
         }
     }
 }

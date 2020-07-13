@@ -9,5 +9,6 @@ CREATE TABLE lists (
   url TEXT,
   is_public BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL,
-  updated_at TIMESTAMP NOT NULL
+  updated_at TIMESTAMP NOT NULL,
+  deleted_at TIMESTAMP
 )

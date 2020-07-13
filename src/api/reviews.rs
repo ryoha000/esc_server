@@ -129,7 +129,7 @@ pub async fn add_recent_reviews(
             max_id = mid;
         }
 
-    max_id = std::cmp::max(max_id, 2013000);
+    max_id = std::cmp::max(max_id, 2014000);
 
 
     let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews(max_id)
