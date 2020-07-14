@@ -43,13 +43,18 @@ pub fn login() -> String {
     dotenv().ok();
 
     env::var("ADMIN_USER_NAME").expect("ADMIN_USER_NAME must be set")
-
 }
 
 pub fn login1() -> String {
     dotenv().ok();
 
     env::var("ADMIN_USER_PASS").expect("ADMIN_USER_PASS must be set")
+}
+
+pub fn root_pass() -> String {
+    dotenv().ok();
+
+    env::var("ROOT_PASS").expect("ROOT_PASS must be set")
 }
 
 pub async fn db_setup(pools: &Pools) {

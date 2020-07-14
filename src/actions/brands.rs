@@ -44,17 +44,23 @@ pub fn insert_new_brand(
     Ok(new_brand)
 }
 
-/// Run query using Diesel to insert a new database row and return the result.
 pub fn insert_new_brands(
     new_brands: Vec<models::Brand>,
     conn: &PgConnection,
 ) -> Result<Vec<models::Brand>, diesel::result::Error> {
-    // It is common when using Diesel with Actix web to import schema-related
-    // modules inside a function's scope (rather than the normal module's scope)
-    // to prevent import collisions and namespace pollution.
     use crate::schema::brands::dsl::*;
 
     diesel::insert_into(brands).values(&new_brands).execute(conn)?;
 
     Ok(new_brands)
+}
+
+pub fn delete_all_brands(
+    conn: &PgConnection,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::brands::dsl::*;
+
+    diesel::delete(brands).execute(conn)?;
+
+    Ok(())
 }

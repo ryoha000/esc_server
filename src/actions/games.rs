@@ -82,6 +82,15 @@ pub fn insert_new_game(
     Ok(new_game)
 }
 
+pub fn delete_all_games(
+    conn: &PgConnection,
+) -> Result<(), diesel::result::Error> {
+    use crate::schema::games::dsl::*;
+
+    diesel::delete(games).execute(conn)?;
+    Ok(())
+}
+
 pub fn insert_new_games(
     new_games: Vec<models::Game>,
     conn: &PgConnection,

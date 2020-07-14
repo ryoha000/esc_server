@@ -196,3 +196,73 @@ pub async fn get_recent_games(
 
     Ok(HttpResponse::Ok().json(games))
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Password {
+    pub password: String,
+}
+
+pub async fn update_all_games(
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<Password>,
+) -> Result<HttpResponse, Error> {
+    let pass = super::super::root_pass();
+    if pass != form.password {
+        return Ok(HttpResponse::Forbidden().body("this method allowed only admin"))
+    }
+    use super::super::actions;
+    use std::process::Command;
+
+    Command::new("diesel")
+        .args(&["migration", "run"])
+        .spawn()
+        .map_err(|_| {
+            eprintln!("failed to start `diesel migration run`");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+    
+    // 今ある全てのゲームを取得
+    let new_games = actions::logics::scraping::games::get_all_games()
+    .await
+    .map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
+    
+    println!("finish get games: {}", new_games.len());
+
+    web::block(move || actions::games::delete_all_games(&conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+    
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _ = web::block(move || actions::games::insert_new_games(new_games, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Command::new("diesel")
+        .args(&["migration", "revert"])
+        .spawn()
+        .map_err(|_| {
+            eprintln!("failed to start `diesel migration revert`");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    println!("finish setup games");
+    Ok(HttpResponse::Ok().body("games updated"))
+}

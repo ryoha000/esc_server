@@ -177,12 +177,12 @@ async fn main() -> std::io::Result<()> {
                 .route("/brands", web::get().to(api::brands::get_brands))
                 .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))
                 // for test
-                .route("/brands", web::post().to(api::brands::add_brand))
+                .route("/brands", web::post().to(api::brands::update_all_brands))
                 // for test
                 .route("brands/{brand_id}", web::post().to(api::brands::add_id_brand))
 
                 .route("/games", web::get().to(api::games::get_minimal_games))
-                .route("/games", web::post().to(api::games::get_games))
+                .route("/games", web::post().to(api::games::update_all_games))
                 .route("/games/{game_id}", web::get().to(api::games::get_game))
                 // for test
                 .route("games/{game_id}", web::post().to(api::games::add_id_game))

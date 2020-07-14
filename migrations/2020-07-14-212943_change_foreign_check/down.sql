@@ -1,0 +1,5 @@
+-- This file should undo anything in `up.sql`
+ALTER TABLE games ENABLE TRIGGER ALL;
+ALTER TABLE timelines ENABLE TRIGGER ALL;
+ALTER TABLE listmaps ENABLE TRIGGER ALL;
+ALTER TABLE reviews ENABLE TRIGGER ALL;

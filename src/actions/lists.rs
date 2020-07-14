@@ -17,9 +17,10 @@ pub fn find_list_by_uid(
     let games: Option<Vec<models::Game>> = diesel::sql_query(get_game_query).load(conn).optional()?;
 
     use crate::schema::lists::dsl::*;
+    let search_deleted_at: Option<chrono::NaiveDateTime> = None;
 
     let list = lists
-        .filter(id.eq(uid.to_string()))
+        .filter(id.eq(uid.to_string()).and(deleted_at.is_not_distinct_from(search_deleted_at)))
         .first::<models::List>(conn)
         .optional()?;
 
@@ -62,9 +63,10 @@ pub fn find_simple_list_by_uid(
     conn: &PgConnection,
 ) -> Result<Option<models::List>, diesel::result::Error> {
     use crate::schema::lists::dsl::*;
+    let search_deleted_at: Option<chrono::NaiveDateTime> = None;
 
     let list = lists
-        .filter(id.eq(uid))
+        .filter(id.eq(uid).and(deleted_at.is_not_distinct_from(search_deleted_at)))
         .first::<models::List>(conn)
         .optional()?;
 

@@ -9,41 +9,42 @@ struct HiddenForm {
 }
 
 pub async fn es_login(user_id: &str, password: &str) -> Result<header::HeaderValue> {
-    let hidden_form = get_token().await?;
-    let params = [("fLoginID", user_id), ("fPassword", password), ("_token", &hidden_form.token), ("sorce_url", "/~ap2/ero/toukei_kaiseki/")];
+    Ok(header::HeaderValue::from_str("PHPSESSID=l4lstvoevvqsrtj02aebb18ds8ehr6g7lqo6l59fuevsv49m99g54nquelm55al7nuqek6sl626ud6ob71h46t9b358kl715osn04asibo4j6b7mukcu17nvpkf8onq0; CONTENTS_VISIT=1; user_id=ryoha; ").unwrap())
+    // let hidden_form = get_token().await?;
+    // let params = [("fLoginID", user_id), ("fPassword", password), ("_token", &hidden_form.token), ("sorce_url", "/~ap2/ero/toukei_kaiseki/")];
 
-    let mut headers = header::HeaderMap::new();
-    headers.insert("cookie", hidden_form.cookie);
+    // let mut headers = header::HeaderMap::new();
+    // headers.insert("cookie", hidden_form.cookie);
 
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()
-        .with_context(|| "failed to create client")?;
+    // let client = reqwest::Client::builder()
+    //     .default_headers(headers)
+    //     .build()
+    //     .with_context(|| "failed to create client")?;
 
-    let res = client.post("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/loginExe_ver2.php")
-        .form(&params)
-        .send()
-        .await
-        .with_context(|| "ErogameScape is not respond")?;
+    // let res = client.post("https://erogamescape.dyndns.org/~ap2/ero/toukei_kaiseki/loginExe_ver2.php")
+    //     .form(&params)
+    //     .send()
+    //     .await
+    //     .with_context(|| "ErogameScape is not respond")?;
 
-    let _cookie = res.headers().get_all("set-cookie").iter();
-    println!("{:?}", _cookie);
+    // let _cookie = res.headers().get_all("set-cookie").iter();
+    // println!("{:?}", _cookie);
 
-    let mut concat_cookie = String::new();
-    let mut i = 0;
-    for c in _cookie {
-        i += 1;
-        println!("{:?}", c);
-        let split_cookie: Vec<&str> = c.to_str().unwrap().split(";").collect();
-        concat_cookie += split_cookie.get(0).with_context(|| "Can not get cookie")?;
-        concat_cookie += "; ";
-    }
-    println!("{}", i);
-    if i < 3 {
-        anyhow::bail!("user_id or password is invalid")
-    }
-    println!("{:?}", concat_cookie);
-    Ok(header::HeaderValue::from_str(&concat_cookie).unwrap())
+    // let mut concat_cookie = String::new();
+    // let mut i = 0;
+    // for c in _cookie {
+    //     i += 1;
+    //     println!("{:?}", c);
+    //     let split_cookie: Vec<&str> = c.to_str().unwrap().split(";").collect();
+    //     concat_cookie += split_cookie.get(0).with_context(|| "Can not get cookie")?;
+    //     concat_cookie += "; ";
+    // }
+    // println!("{}", i);
+    // if i < 3 {
+    //     anyhow::bail!("user_id or password is invalid")
+    // }
+    // println!("{:?}", concat_cookie);
+    // Ok(header::HeaderValue::from_str(&concat_cookie).unwrap())
 }
 
 async fn get_token() -> Result<HiddenForm> {

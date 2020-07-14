@@ -1,6 +1,7 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::actions::brands;
 use std::ops::DerefMut;
+use serde::{Deserialize, Serialize};
 
 pub async fn get_brand(
     pools: web::Data<super::super::Pools>,
@@ -132,4 +133,74 @@ pub async fn add_id_brand(
         })?;
 
     Ok(HttpResponse::Ok().json(brand))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Password {
+    pub password: String,
+}
+
+pub async fn update_all_brands(
+    pools: web::Data<super::super::Pools>,
+    form: web::Json<Password>,
+) -> Result<HttpResponse, Error> {
+    let pass = super::super::root_pass();
+    if pass != form.password {
+        return Ok(HttpResponse::Forbidden().body("this method allowed only admin"))
+    }
+    use super::super::actions;
+    use std::process::Command;
+
+    Command::new("diesel")
+        .args(&["migration", "run"])
+        .spawn()
+        .map_err(|_| {
+            eprintln!("failed to start `diesel migration run`");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    // 今ある全てのブランドを取得
+    let new_brands = actions::logics::scraping::brands::get_all_brands()
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    println!("finish get brands: {}", new_brands.len());
+
+    web::block(move || actions::brands::delete_all_brands(&conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _ = web::block(move || actions::brands::insert_new_brands(new_brands, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    Command::new("diesel")
+        .args(&["migration", "revert"])
+        .spawn()
+        .map_err(|_| {
+            eprintln!("failed to start `diesel migration revert`");
+            HttpResponse::InternalServerError().finish()
+        })?;
+
+    println!("finish setup brands");
+    Ok(HttpResponse::Ok().body("brands updated"))
 }
