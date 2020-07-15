@@ -48,7 +48,6 @@ pub fn find_followers_by_uid(
     // TODO: ちゃんとdieselでかく
     let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id, icon_url from users inner join follows on follows.followee_id = users.id WHERE follows.allowed = true AND follows.follower_id = \'{}\';", search_follower_id);
     let followers = diesel::sql_query(query).load(conn).optional()?;
-    println!("{:?}", followers);
     Ok(followers)
 }
 
@@ -60,7 +59,6 @@ pub fn find_followees_by_uid(
     // TODO: ちゃんとdieselでかく
     let query = format!("SELECT users.id, users.es_user_id, users.display_name, users.comment, users.show_all_users, users.show_detail_all_users, users.show_followers, users.show_followers_okazu, users.twitter_id, icon_url from users inner join follows on follows.follower_id = users.id WHERE follows.allowed = true AND follows.followee_id = \'{}\';", followee_id);
     let followees = diesel::sql_query(query).load(conn).optional()?;
-    println!("{:?}", followees);
     Ok(followees)
 }
 

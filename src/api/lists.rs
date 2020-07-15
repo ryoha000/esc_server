@@ -219,6 +219,7 @@ pub async fn get_lists_by_user_id(
             })?;
 
             let me_uuid: uuid::Uuid = me.user_id.parse().map_err(|e| {
+                eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?;
 
@@ -286,13 +287,115 @@ pub async fn get_list(
         eprintln!("couldn't get redis connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
-    
-    let list = web::block(move || lists::find_list_by_uid(list_id.into_inner(), &conn))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
 
-    Ok(HttpResponse::Ok().json(list))
+    if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
+        let list_with_games = web::block(move || lists::find_list_by_uid(list_id.into_inner(), &conn))
+            .await
+            .map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+        let mut is_show_okazu = false;
+        let res_list: Option<models::List>;
+        if let Some(list) = list_with_games.list {
+            res_list = Some(list.clone());
+            if list.user_id == me.user_id {
+                return Ok(HttpResponse::Ok().json(
+                    actions::lists::ListWithGames {
+                        list: Some(list),
+                        games: list_with_games.games
+                    }
+                ))
+            }
+
+            if !list.is_public {
+                return Ok(HttpResponse::Forbidden().body("this list is not public"))
+            }
+
+            // 自分がフォローしてるユーザーを取得
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            let me_uuid: uuid::Uuid = me.user_id.parse().map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+            let _followees = web::block(move || actions::follows::find_followees_by_uid(me_uuid, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            // 自分がフォローしてるかどうか(してないならForbidden)
+            let mut is_follow = false;
+            if let Some(followees) = _followees {
+                for flee in followees {
+                    if flee.id == list.user_id {
+                        is_follow = true;
+                    }
+                }
+            }
+
+            if !is_follow {
+                return Ok(HttpResponse::Forbidden().body("you dont follow owener"))
+            }
+
+            // ownerの情報からmaskを決める
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+            let _user = web::block(move || actions::users::find_user_by_uid(list.user_id.clone(), &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            if let Some(user) = _user {
+                if let Some(b) =  user.show_followers_okazu {
+                    is_show_okazu = b;
+                }
+                if let Some(b) =  user.show_followers {
+                    if !b {
+                        return Ok(HttpResponse::Forbidden().body("This user does not disclose information to their followers"))
+                    }
+                }
+            }
+        } else {
+            return Ok(HttpResponse::NotFound().body("This list is not found"))
+        }
+        let res_games: Option<Vec<models::Game>>;
+        match is_show_okazu {
+            true => {
+                res_games = list_with_games.games;
+            },
+            false => {
+                let mut res_game_vec: Vec<models::Game> = Vec::new();
+                if let Some(games) = &list_with_games.games {
+                    for g in games {
+                        if let Some(b) = g.okazu {
+                            if !b {
+                                res_game_vec.push(g.clone());
+                            }
+                        } else {
+                            res_game_vec.push(g.clone());
+                        }
+                    }
+                }
+                res_games = Some(res_game_vec);
+            }
+        }
+        Ok(HttpResponse::Ok().json(
+            actions::lists::ListWithGames {
+                list: res_list,
+                games: res_games
+            }
+        ))
+    } else {
+        Ok(HttpResponse::Unauthorized().body("please login"))
+    }
 }
