@@ -127,6 +127,9 @@ pub fn mask_timeline(
                     }
                 }
             }
+            if res_tl.user_id == _me.user_id {
+                is_follow = true;
+            }
         }
         _ => {}
     }
