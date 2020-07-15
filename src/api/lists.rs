@@ -1,6 +1,7 @@
 use actix_web::{web, Error, HttpResponse};
 use super::super::middleware;
 use super::super::actions::lists;
+use super::super::actions;
 use super::super::models;
 use serde::{Deserialize, Serialize};
 
@@ -175,6 +176,97 @@ pub async fn get_lists(
                     HttpResponse::InternalServerError().finish()
                 })?;
             Ok(HttpResponse::Ok().json(lists))
+        },
+        _ => return Ok(HttpResponse::Unauthorized().body("please login"))
+    }
+}
+
+pub async fn get_lists_by_user_id(
+    auth: middleware::Authorized,
+    pools: web::Data<super::super::Pools>,
+    user_id: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    match middleware::check_user(auth, &mut redis_conn) {
+        Some(me) => {
+            let user_id = user_id.into_inner();
+            let user_id_clone = user_id.clone();
+
+            let lists = web::block(move || lists::find_simple_lists_by_user_id(user_id, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            // 自分なら何もせずに返却
+            if user_id_clone == me.user_id {
+                return Ok(HttpResponse::Ok().json(lists))
+            }
+
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            let me_uuid: uuid::Uuid = me.user_id.parse().map_err(|e| {
+                HttpResponse::InternalServerError().finish()
+            })?;
+
+            let _followees = web::block(move || actions::follows::find_followees_by_uid(me_uuid, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+            let mut is_follow = false;
+            let mut target_user = models::User::new();
+            if let Some(followees) = _followees {
+                for flee in &followees {
+                    if flee.id == user_id_clone {
+                        is_follow = true;
+                        target_user = flee.clone();
+                        break
+                    }
+                }
+            }
+
+            // followerじゃないならForbidden
+            if !is_follow {
+                return Ok(HttpResponse::Forbidden().body("you are not follow this user"))
+            }
+
+            // followerにも隠す設定ならForbidden
+            match target_user.show_followers {
+                Some(b) => {
+                    if !b {
+                        return Ok(HttpResponse::Forbidden().body("This user does not disclose information to their followers"))
+                    }
+                },
+                _ => return Ok(HttpResponse::Forbidden().body("This user does not disclose information to their followers"))
+            }
+
+            let mut res_lists: Vec<models::List> = Vec::new();
+            if let Some(unfilter_list) = lists {
+                for li in unfilter_list {
+                    // publicなものだけreturn
+                    if li.is_public {
+                        res_lists.push(li);
+                    }
+                }
+            }
+
+            Ok(HttpResponse::Ok().json(res_lists))
         },
         _ => return Ok(HttpResponse::Unauthorized().body("please login"))
     }
