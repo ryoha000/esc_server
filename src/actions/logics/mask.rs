@@ -8,44 +8,93 @@ use std::collections::HashMap;
 use diesel::prelude::*;
 use anyhow::{Context, Result};
 
-// pub fn mask_timelines(
-//     auth: middleware::Authorized,
-//     timelines: Vec<models::Timeline>,
-//     redis_pool: RedisPool,
-//     conn: &PgConnection,
-// ) -> Result<Vec<timelines::MaskedTimeline>> {
-//     let mut redis_conn = redis_pool.get().context("couldn't get db connection from pools")?;
+pub fn mask_recent_timelines(
+    me: Option<middleware::Me>,
+    offset: i64,
+    conn: &PgConnection,
+) -> Result<Vec<timelines::MaskedTimeline>> {
+    // 自分がフォローしてるユーザーのIDの配列
+    let mut followee_user_ids: Vec<String> = Vec::new();
+    // 自分がフォローしてるユーザーの配列
+    let mut followee_users: Vec<models::User> = Vec::new();
+    match me {
+        Some(_me) => {
+            let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
+            // 自分の行動もマスクする必要ない
+            followee_user_ids.push(_me.user_id);
 
-//     let followees = actions::follows::find_followees_by_uid(user_id, conn)?;
-//     let mut new_timelines: Vec<timelines::MaskedTimeline> = Vec::new();
+            if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
+                // 自分がフォローしてるユーザーを入れていく
+                for flee in &followees {
+                    followee_user_ids.push(flee.id.clone());
+                }
+                followee_users = followees;
+            }
+        }
+        _ => {}
+    }
 
-//     for _tl in timelines {
-//         let mut new_tl = _tl;
+    // timelineとかの配列
+    let tl_with_game_vec: Vec<(models::Timeline, models::Game)>;
+    // maskする必要があるuseridの配列
+    let mut necessary_mask_user_ids: Vec<String> = Vec::new();
+    if let Some(_tl_with_game_vec) = actions::timelines::find_timelines_with_game_of_limit20_by_unnecessary_mask_user_ids(offset, conn)? {
+        tl_with_game_vec = _tl_with_game_vec;
+        for (tl, _) in &tl_with_game_vec {
+            let mut is_follow = false;
+            for uid in &followee_user_ids {
+                if uid == &tl.user_id {
+                    is_follow = true;
+                }
+            }
+            if !is_follow {
+                necessary_mask_user_ids.push(tl.user_id.clone());
+            }
+        }
+    } else {
+        anyhow::bail!("timeline not found")
+    }
 
-//         let mut is_follow = false;
-//         for flee in &followees {
-//             if new_tl.user_id == flee.id {
-//                 is_follow = true;
-//             }
-//         }
+    // 匿名化したuserのハッシュマップを用意
+    let masked_users_map = mask_users_by_ids(necessary_mask_user_ids, models::RandomPurpose::FTimeline, conn)?;
 
-//         if !is_follow {
-//             new_tl.user_id = String::from("");
-//         }
+    // 返却する配列
+    let mut res_timelines: Vec<timelines::MaskedTimeline> = Vec::new();
+    for (tl, gm) in tl_with_game_vec {
+        let mut res_tl = tl;
+        let mut res_user: models::User = models::User::new();
+        match masked_users_map.get(&res_tl.user_id) {
+            Some(masked_user) => {
+                res_tl.user_id = masked_user.id.clone();
+                res_user = masked_user.clone();
+            },
+            _ => {
+                let mut is_error = true;
+                for flee in &followee_users {
+                    if flee.id == res_tl.user_id {
+                        res_user = flee.clone();
+                        is_error = false;
+                        break
+                    }
+                }
+                if is_error {
+                    anyhow::bail!("something went wrong")
+                }
+            }
+        }
+        res_timelines.push(
+            timelines::MaskedTimeline {
+                timeline: res_tl,
+                list: None,
+                review: None,
+                game: gm,
+                user: res_user,
+            }
+        )
+    }
 
-//         let mut _review: Option<models::Review> = None;
-//         match new_tl.log_type {
-//             // Play => 0, Review => 1, List = 2
-//             0 => 
-//         }
-//         // new_timelines.push(
-//         //     timelines::MaskedTimeline {
-//         //         timeline: new_tl
-//         //     }
-//         // );
-//     }
-//     Ok(new_timelines)
-// }
+    Ok(res_timelines)
+}
 
 pub fn mask_timeline(
     me: Option<middleware::Me>,
@@ -73,13 +122,17 @@ pub fn mask_timeline(
             if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
                 // action主のfollowerかどうか確認
                 for flee in &followees {
-                    if res_tl.user_id.clone() == flee.id {
+                    if res_tl.user_id == flee.id {
                         is_follow = true;
                     }
                 }
             }
         }
         _ => {}
+    }
+
+    if res_tl.log_type == 2 && !is_follow {
+        anyhow::bail!("this is unfollow user list activity")
     }
 
     let mut user = models::User::annonymus(random_id.id.clone(), String::from(""));
@@ -182,9 +235,7 @@ pub fn mask_users_by_ids(
 
     let mut user_maps = HashMap::new();
     for (rid, u) in get_random_ids {
-        let mut new_user = u;
-        new_user.id = rid.id;
-        user_maps.insert(rid.user_id, new_user);
+        user_maps.insert(rid.user_id, models::User::light_annonymus(rid.id, u));
     }
     Ok(user_maps)
 }

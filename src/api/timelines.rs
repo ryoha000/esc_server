@@ -1,5 +1,4 @@
 use actix_web::{web, Error, HttpResponse};
-use super::super::actions::timelines;
 use super::super::actions::logics::mask;
 use super::super::models;
 use super::super::middleware;
@@ -21,6 +20,7 @@ pub struct GetInfo {
 
 pub async fn get_timelines(
     info: web::Query<GetInfo>,
+    auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>
 ) -> Result<HttpResponse, Error> {
     let conn = pools.db.get().map_err(|_| {
@@ -28,8 +28,13 @@ pub async fn get_timelines(
         HttpResponse::InternalServerError().finish()
     })?;
 
-    // use web::block to offload blocking Diesel code without blocking server thread
-    let _timelines = web::block(move || timelines::find_timelines_with_game_of_limit20(info.offset, &conn))
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get redis connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let me = middleware::check_user(auth, &mut redis_conn);
+    let _timelines = web::block(move || mask::mask_recent_timelines(me, info.offset, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
