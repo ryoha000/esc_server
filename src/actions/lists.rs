@@ -78,9 +78,10 @@ pub fn find_simple_lists_by_user_id(
     conn: &PgConnection,
 ) -> Result<Option<Vec<models::List>>, diesel::result::Error> {
     use crate::schema::lists::dsl::*;
+    let search_deleted_at: Option<chrono::NaiveDateTime> = None;
 
     let list = lists
-        .filter(user_id.eq(search_user_id))
+        .filter(user_id.eq(search_user_id).and(deleted_at.is_not_distinct_from(search_deleted_at)))
         .load::<models::List>(conn)
         .optional()?;
 

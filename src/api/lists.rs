@@ -184,8 +184,19 @@ pub async fn get_lists(
 pub async fn get_lists_by_user_id(
     auth: middleware::Authorized,
     pools: web::Data<super::super::Pools>,
-    user_id: web::Path<String>,
+    user_id: web::Path<uuid::Uuid>,
 ) -> Result<HttpResponse, Error> {
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    let _user: models::User;
+    match web::block(move || actions::randomids::get_user_by_id(user_id.into_inner(), &conn)).await {
+        Ok(user) => _user = user,
+        _ => return Ok(HttpResponse::NotFound().body("user not found"))
+    }
+
     let conn = pools.db.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -198,7 +209,7 @@ pub async fn get_lists_by_user_id(
 
     match middleware::check_user(auth, &mut redis_conn) {
         Some(me) => {
-            let user_id = user_id.into_inner();
+            let user_id = _user.id.clone();
             let user_id_clone = user_id.clone();
 
             let lists = web::block(move || lists::find_simple_lists_by_user_id(user_id, &conn))
@@ -231,12 +242,10 @@ pub async fn get_lists_by_user_id(
                 })?;
 
             let mut is_follow = false;
-            let mut target_user = models::User::new();
             if let Some(followees) = _followees {
                 for flee in &followees {
                     if flee.id == user_id_clone {
                         is_follow = true;
-                        target_user = flee.clone();
                         break
                     }
                 }
@@ -248,7 +257,7 @@ pub async fn get_lists_by_user_id(
             }
 
             // followerにも隠す設定ならForbidden
-            match target_user.show_followers {
+            match _user.show_followers {
                 Some(b) => {
                     if !b {
                         return Ok(HttpResponse::Forbidden().body("This user does not disclose information to their followers"))
