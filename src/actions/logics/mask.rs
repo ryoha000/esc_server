@@ -21,7 +21,7 @@ pub fn mask_recent_timelines(
         Some(_me) => {
             let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
             // 自分の行動もマスクする必要ない
-            followee_user_ids.push(_me.user_id);
+            followee_user_ids.push(_me.user_id.clone());
 
             if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
                 // 自分がフォローしてるユーザーを入れていく
@@ -29,6 +29,11 @@ pub fn mask_recent_timelines(
                     followee_user_ids.push(flee.id.clone());
                 }
                 followee_users = followees;
+            }
+
+            if let Some(user) = actions::users::find_user_by_uid(_me.user_id, conn)? {
+                // 自分もいれる
+                followee_users.push(user);
             }
         }
         _ => {}
@@ -56,7 +61,7 @@ pub fn mask_recent_timelines(
     }
 
     // 匿名化したuserのハッシュマップを用意
-    let masked_users_map = mask_users_by_ids(necessary_mask_user_ids, models::RandomPurpose::FTimeline, conn)?;
+    let masked_users_map = mask_annynomus_users_by_ids(necessary_mask_user_ids, models::RandomPurpose::FTimeline, conn)?;
 
     // 返却する配列
     let mut res_timelines: Vec<timelines::MaskedTimeline> = Vec::new();
@@ -111,43 +116,52 @@ pub fn mask_timeline(
         anyhow::bail!("timeline not found")
     }
 
-    // 匿名化する場合のidを取得
-    let random_id = actions::randomids::get_randomid_by_user_id(res_tl.user_id.clone(), models::RandomPurpose::FTimeline as i32, conn)?;
-
+    let user: models::User;
     let mut is_follow: bool = false;
-    match me {
-        Some(_me) => {
-            let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
-
-            if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
-                // action主のfollowerかどうか確認
-                for flee in &followees {
-                    if res_tl.user_id == flee.id {
-                        is_follow = true;
+    let mut rid_id = String::from("");
+    if res_tl.user_id.clone() != String::from("") {
+        // 匿名化する場合のidを取得
+        let random_id = actions::randomids::get_randomid_by_user_id(res_tl.user_id.clone(), models::RandomPurpose::FTimeline as i32, conn)?;
+        rid_id = random_id.id.clone();
+    
+        match me {
+            Some(_me) => {
+                let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
+    
+                if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
+                    // action主のfollowerかどうか確認
+                    for flee in &followees {
+                        if res_tl.user_id == flee.id {
+                            is_follow = true;
+                        }
                     }
                 }
+                if res_tl.user_id == _me.user_id {
+                    is_follow = true;
+                }
             }
-            if res_tl.user_id == _me.user_id {
-                is_follow = true;
+            _ => {}
+        }
+    
+        if res_tl.log_type == 2 && !is_follow {
+            anyhow::bail!("this is unfollow user list activity")
+        }
+
+        match is_follow {
+            true => {
+                if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
+                    user = getted_user;
+                } else {
+                    user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
+                }
+            },
+            false => {
+                user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
+                res_tl.user_id = random_id.id.clone();
             }
         }
-        _ => {}
-    }
-
-    if res_tl.log_type == 2 && !is_follow {
-        anyhow::bail!("this is unfollow user list activity")
-    }
-
-    let mut user = models::User::annonymus(random_id.id.clone(), String::from(""));
-    match is_follow {
-        true => {
-            if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
-                user = getted_user;
-            }
-        },
-        false => {
-            res_tl.user_id = random_id.id.clone();
-        }
+    } else {
+        user = models::User::annonymus(res_tl.user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
     }
 
     // reviewかListを挿入
@@ -157,9 +171,10 @@ pub fn mask_timeline(
         // Play => 0, Review => 1, List = 2
         1 => {
             if let Some((_reviewlog, found_review)) = actions::reviewlogs::find_review_by_timeline_id(timeline_id.clone(), conn)? {
+                println!("{:?}", found_review);
                 let mut assign_review = found_review;
                 if !is_follow {
-                    assign_review.user_id = random_id.id;
+                    assign_review.user_id = rid_id;
                 }
                 _review = Some(assign_review);
             }
@@ -168,7 +183,7 @@ pub fn mask_timeline(
             if let Some((_listlog, found_list)) = actions::listlogs::find_list_by_timeline_id(timeline_id, conn)? {
                 let mut assign_list = found_list;
                 if !is_follow {
-                    assign_list.user_id = random_id.id;
+                    assign_list.user_id = rid_id;
                 }
                 _list = Some(assign_list);
             }
@@ -226,6 +241,33 @@ pub fn mask_user_by_id(
         Some((rid, u)) => Ok(models::User::light_annonymus(rid.id, u)),
         _ => anyhow::bail!("masked user not found")
     }
+}
+
+pub fn mask_annynomus_users_by_ids(
+    user_ids: Vec<String>,
+    purpose: models::RandomPurpose,
+    conn: &PgConnection,
+) -> Result<std::collections::HashMap<std::string::String, models::User>> {
+
+    let get_random_ids = actions::randomids::get_randomids_with_users_by_user_ids(user_ids, purpose as i32, conn)?;
+
+    let mut user_maps = HashMap::new();
+    for (rid, u) in get_random_ids {
+        let masked_es_id: String;
+        let masked_display_name: String;
+        match &*u.display_name {
+            "批評空間のユーザー" => {
+                masked_es_id = String::from("批評空間のユーザー");
+                masked_display_name = String::from("批評空間のユーザー");
+            },
+            _ => {
+                masked_es_id = String::from("");
+                masked_display_name = String::from("名無しさん");
+            }
+        }
+        user_maps.insert(rid.user_id, models::User::annonymus(rid.id, masked_es_id, masked_display_name));
+    }
+    Ok(user_maps)
 }
 
 pub fn mask_users_by_ids(

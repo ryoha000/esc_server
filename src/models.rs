@@ -53,11 +53,11 @@ impl User {
             icon_url: None,
         }
     }
-    pub fn annonymus(randomid: String, es_user_id: String) -> User {
+    pub fn annonymus(randomid: String, es_user_id: String, display_name: String) -> User {
         User {
             id: randomid,
             es_user_id: es_user_id,
-            display_name: String::from("名無しさん"),
+            display_name: display_name,
             comment: None,
             show_all_users: Some(true),
             show_detail_all_users: Some(false),
