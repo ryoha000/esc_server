@@ -44,12 +44,20 @@ pub fn insert_new_reviewlog(
 pub fn insert_new_reviewlogs(
     new_reviewlogs: Vec<models::Reviewlog>,
     conn: &PgConnection,
-) -> Result<Vec<models::Reviewlog>, diesel::result::Error> {
+) -> Result<(), diesel::result::Error> {
     use crate::schema::reviewlogs::dsl::*;
 
-    diesel::insert_into(reviewlogs).values(&new_reviewlogs).execute(conn)?;
+    for rl in new_reviewlogs {
+        match diesel::insert_into(reviewlogs).values(&rl).execute(conn) {
+            Ok(_) => {},
+            e => {
+                eprintln!("{:?}", e);
+                eprintln!("{:?}", rl);
+            }
+        }
+    }
 
-    Ok(new_reviewlogs)
+    Ok(())
 }
 
 pub fn find_review_by_timeline_id(
@@ -65,5 +73,6 @@ pub fn find_review_by_timeline_id(
         .first::<(models::Reviewlog, models::Review)>(conn)
         .optional()?;
 
+        println!("{:?}", reviewlog);
     Ok(reviewlog)
 }

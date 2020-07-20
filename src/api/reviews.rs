@@ -110,46 +110,14 @@ pub async fn add_recent_reviews(
     pools: web::Data<super::super::Pools>,
     srv: web::Data<Addr<super::super::ws_actor::WsActor>>,
 ) -> Result<HttpResponse, Error> {
-    println!("a");
     let ws_a = srv.get_ref().clone();
 
-    let conn = pools.db.get().map_err(|_| {
-        eprintln!("couldn't get db connection from pools");
-        HttpResponse::InternalServerError().finish()
-    })?;
-
-    let mut max_id = 0;
-
-    if let Some(mid) = web::block(move || reviews::get_max_es_id(&conn))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })? {
-            max_id = mid;
-        }
-
-    max_id = std::cmp::max(max_id, 2014000);
-
-
-    let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews(max_id)
+    let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews()
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
-
-    let mut new_max_id = 0;
-    println!("{:?}", max_id);
-
-    for r in &new_reviews {
-        if let Some(id) = r.es_id {
-            if new_max_id < id {
-                new_max_id = id
-            }
-        }
-    }
-    println!("{:?}", new_max_id);
 
     let mut user_ids: Vec<(String, String)> = Vec::new();
 
@@ -213,8 +181,6 @@ pub async fn add_recent_reviews(
         .map_err(|e| {
             eprintln!("{}", e);
         })?;
-
-    println!("{:?}", _timelines);
 
     for _tl in &_timelines {
         ws_a.do_send(super::super::ws_actor::ClientMessage {

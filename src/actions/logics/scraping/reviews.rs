@@ -26,9 +26,9 @@ pub async fn get_all_reviews() -> Result<Vec<models::Review>> {
     Ok(_reviews)
 }
 
-pub async fn get_recent_reviews(max_id: i32) -> Result<Vec<models::Review>> {
+pub async fn get_recent_reviews() -> Result<Vec<models::Review>> {
     let mut _reviews: Vec<models::Review> = Vec::new();
-    let query = format!("WHERE id > {}", max_id);
+    let query = format!("WHERE CURRENT_TIMESTAMP - interval '5 minute' < modified");
     let fragment = execute_on_es(make_query(query)).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     for tr in fragment.select(&tr_selector) {
