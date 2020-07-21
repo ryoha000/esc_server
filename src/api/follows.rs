@@ -212,7 +212,7 @@ pub async fn get_followees(
 
     // mask処理
     if let Some(followees) = _followees {
-        let mut necessary_mask_users: Vec<models::User> = Vec::new();
+        let necessary_mask_users: Vec<models::User>;
         let mut unnecessary_mask_users: Vec<models::User> = Vec::new();
 
         // maskする必要のあるUserと、必要のないUserで分離
@@ -243,7 +243,13 @@ pub async fn get_followees(
             match _my_followees {
                 Some(my_followees) => {
                     let _tupple = mask::find_wanna_mask_userids(&me.user_id, &my_followees, followees);
-                    necessary_mask_users = _tupple.0;
+                    let mut tmp_users: Vec<models::User> = Vec::new();
+                    for tu in _tupple.0 {
+                        let mut u = tu;
+                        u.password = String::from("");
+                        tmp_users.push(u);
+                    }
+                    necessary_mask_users = tmp_users;
                     unnecessary_mask_users = _tupple.1;
                 },
                 _ => {
@@ -458,13 +464,13 @@ pub async fn handle_follow_request(
                     return Ok(HttpResponse::Ok().body("accept follow"))
                 },
                 false => {
-                    let deleted_follow = web::block(move || follows::delete_follow(follow_id, &conn))
+                    web::block(move || follows::delete_follow(follow_id, &conn))
                         .await
                         .map_err(|e| {
                             eprintln!("{}", e);
                             HttpResponse::InternalServerError().finish()
                         })?;
-                    return Ok(HttpResponse::Ok().json(deleted_follow))
+                    return Ok(HttpResponse::Ok().body("remove follow request"))
                 }
             }
         },

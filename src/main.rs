@@ -166,7 +166,7 @@ async fn main() -> std::io::Result<()> {
 
                 .route("/users/{user_id}", web::get().to(api::users::get_user_detail))
                 .route("/users", web::get().to(api::users::get_users))
-                .route("/users", web::post().to(api::users::signup))
+                .route("/users", web::post().to(api::users::login))
                 .route("/users", web::put().to(api::users::edit_user))
                 .route("/users/{user_id}/followers", web::get().to(api::follows::get_followers))
                 .route("/users/{user_id}/followees", web::get().to(api::follows::get_followees))

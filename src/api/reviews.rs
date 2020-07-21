@@ -132,7 +132,13 @@ pub async fn add_recent_reviews(
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })? {
-            Some(res) => user_ids = res,
+            Some(res) => {
+                for (id, es_user_id) in res {
+                    if let Some(euid) = es_user_id {
+                        user_ids.push((id, euid));
+                    }
+                }
+            },
             _ => {}
         }
 

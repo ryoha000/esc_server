@@ -65,7 +65,7 @@ pub async fn db_setup(pools: &Pools) {
 
     let mut new_user = models::User::new();
     new_user.id = String::from("");
-    new_user.es_user_id = String::from("批評空間のユーザー");
+    new_user.es_user_id = Some(String::from("批評空間のユーザー"));
     new_user.display_name = String::from("批評空間のユーザー");
     let _ = actions::users::insert_new_user(new_user, &conn).unwrap();
 

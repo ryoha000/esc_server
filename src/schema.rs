@@ -179,8 +179,10 @@ table! {
 table! {
     users (id) {
         id -> Varchar,
-        es_user_id -> Varchar,
+        es_user_id -> Nullable<Varchar>,
+        name -> Varchar,
         display_name -> Varchar,
+        password -> Varchar,
         comment -> Nullable<Text>,
         show_all_users -> Nullable<Bool>,
         show_detail_all_users -> Nullable<Bool>,

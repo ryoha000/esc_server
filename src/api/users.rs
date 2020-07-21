@@ -1,11 +1,11 @@
-use actix_web::{web, Error, HttpResponse, http};
+use actix_web::{web, Error, HttpResponse};
 use serde::{Deserialize, Serialize};
 use super::super::actions::users;
 use super::super::actions::randomids;
 use super::super::actions::follows;
 use super::super::actions::timelines;
 use super::super::actions::reviews;
-use super::super::actions::logics::{es_login};
+use super::super::actions::logics::hash;
 use super::super::actions::logics::scraping;
 use super::super::actions::logics::mask;
 use super::super::models;
@@ -13,16 +13,10 @@ use super::super::middleware;
 use std::ops::DerefMut;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NewUser {
-    pub name: String,
-    pub display_name: String,
-    pub password: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PostLogin {
     pub name: String,
     pub password: String,
+    pub is_login: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,7 +190,7 @@ pub async fn get_user_detail(
                     "" => {},
                     _ => {
                         search_user.display_name = String::from("名無しさん");
-                        search_user.es_user_id = String::from("内緒");
+                        search_user.es_user_id = Some(String::from("内緒"));
                     },
                 }
                 search_user.icon_url = None;
@@ -262,6 +256,7 @@ pub async fn get_user_detail(
         }
     };
     set_tl.await;
+    search_user.password = String::from("");
     Ok(HttpResponse::Ok().json(ResponseUserDetail { user: search_user, play: play_timeline, review: review_timeline, list: list_timeline }))
 }
 
@@ -284,76 +279,6 @@ pub async fn get_users(
     Ok(HttpResponse::Ok().json(user))
 }
 
-pub async fn signup(
-    pools: web::Data<super::super::Pools>,
-    form: web::Json<NewUser>,
-) -> Result<HttpResponse, Error> {
-    let conn = pools.db.get().map_err(|_| {
-        eprintln!("couldn't get db connection from pools");
-        HttpResponse::InternalServerError().finish()
-    })?;
-    // println!("{}", &form.)
-
-    let mut res = HttpResponse::new(http::StatusCode::OK);
-    // Login処理
-    if let Ok(cookie) = es_login::es_login(&form.name, &form.password)
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            res = HttpResponse::NotFound()
-                .body(format!("{:?}", e));
-        }) {
-            let mut new_user = models::User::new();
-            new_user.es_user_id = form.name.clone();
-            new_user.display_name = form.display_name.clone();
-            let user = web::block(move || users::insert_new_user(new_user, &conn))
-                .await
-                .map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
-            
-            
-            let session_id = uuid::Uuid::new_v4().to_string();
-            let mut redis_conn = pools.redis.get().map_err(|_| {
-                eprintln!("couldn't get db connection from pools");
-                HttpResponse::InternalServerError().finish()
-            })?;
-            
-            // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
-            r2d2_redis::redis::pipe()
-                .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
-                .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
-                .query(redis_conn.deref_mut()).map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
-
-            let insert_reviews = scraping::reviews::get_reviews_by_es_user_id(form.name.clone())
-                .await
-                .map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-                })?;
-
-            let conn = pools.db.get().map_err(|_| {
-                eprintln!("couldn't get db connection from pools");
-                HttpResponse::InternalServerError().finish()
-            })?;
-
-            let _reviews = web::block(move || reviews::insert_new_reviews(insert_reviews, &conn))
-                .await
-                .map_err(|e| {
-                    eprintln!("{}", e);
-                    HttpResponse::InternalServerError().finish()
-            })?;
-
-            res = HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user);
-        }
-
-    Ok(res)
-}
-
 pub async fn login(
     pools: web::Data<super::super::Pools>,
     form: web::Json<PostLogin>,
@@ -362,45 +287,79 @@ pub async fn login(
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
     })?;
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
 
-    let pass = form.password.clone();
+    let name_clone = form.name.clone();
 
-    let user = web::block(move || users::find_user_by_name(form.name.clone(), &conn))
+    let user_uid: String;
+    let res_user: models::User;
+    match web::block(move || users::find_user_by_name(name_clone, &conn))
         .await
         .map_err(|e| {
             eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
-        })?;
-    
-    let mut res = HttpResponse::new(http::StatusCode::OK);
-    if let Some(user) = user {
-        // Login処理
-        let cookie = es_login::es_login(&user.es_user_id, &pass)
-            .await
-            .map_err(|e| {
-                eprintln!("{}", e);
-                res = HttpResponse::NotFound()
-                    .body(format!("{:?}", e));
+    })? {
+        Some(user) => {
+            // loginの処理
+            let hashed_pass = hash::make_hashed_string(&form.password);
+            if !form.is_login {
+                return Ok(HttpResponse::Conflict().body("this name already used"))
+            }
+            if user.password != hashed_pass {
+                return Ok(HttpResponse::BadRequest().body("your entered pair is incorrect"))
+            }
+            user_uid = user.id.clone();
+            res_user = user;
+        },
+        _ => {
+            // signupの処理
+            if form.is_login {
+                return Ok(HttpResponse::Conflict().body("your entered pair is incorrect"))
+            }
+            let mut new_user = models::User::new();
+            new_user.name = form.name.clone();
+            new_user.display_name = form.name.clone();
+            new_user.password = hash::make_hashed_string(&form.password);
+
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
             })?;
-        let session_id = uuid::Uuid::new_v4().to_string();
-        let mut redis_conn = pools.redis.get().map_err(|_| {
-            eprintln!("couldn't get db connection from pools");
+            let user = web::block(move || users::insert_new_user(new_user, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            user_uid = user.id.clone();
+            res_user = user;
+        }
+    }
+    let mut prev_session = String::from("");
+    // sessionがあったら破棄
+    let _prev_session: Option<String> = r2d2_redis::redis::cmd("GET").arg(&format!("session_user_id:{}", user_uid)).query(redis_conn.deref_mut()).map_err(|e| {
+        eprintln!("{}", e);
+        HttpResponse::InternalServerError().finish()
+    })?;
+    if let Some(ps) = _prev_session {
+        prev_session = ps;
+    }
+    println!("{:?}", prev_session);
+    // redisにsessionを置く
+    let session_id = uuid::Uuid::new_v4().to_string();
+    r2d2_redis::redis::pipe()
+        .cmd("DEL").arg(&format!("session_user:{}", prev_session))
+        .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user_uid.clone())
+        .cmd("SET").arg(&format!("session_user_id:{}", user_uid)).arg(session_id.clone())
+        .query(redis_conn.deref_mut()).map_err(|e| {
+            eprintln!("{}", e);
             HttpResponse::InternalServerError().finish()
         })?;
 
-        // session_idとそのハッシュをRedisに、valueはそれぞれcookieとuser_id
-        r2d2_redis::redis::pipe()
-            .cmd("SET").arg(&format!("session_user:{}", session_id)).arg(user.id.clone())
-            .cmd("SET").arg(&format!("session_header:{}", session_id)).arg(cookie.to_str().unwrap())
-            .query(redis_conn.deref_mut()).map_err(|e| {
-                eprintln!("{}", e);
-                HttpResponse::InternalServerError().finish()
-            })?;
-        
-        return Ok(HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(user))
-    }
-
-    Ok(HttpResponse::NotFound().body("user not found"))
+    return Ok(HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(res_user))
 }
 
 pub async fn edit_user(
@@ -427,14 +386,38 @@ pub async fn edit_user(
                 HttpResponse::InternalServerError().finish()
             })?;
 
+        let mut updated_user = form.user.clone();
         if let Some(pu) = prev_user {
-            if pu.es_user_id != form.user.es_user_id || uid != form.user.id {
+            // 違うユーザーのを編集しようとしてるなら弾く
+            if uid != form.user.id {
                 return Ok(HttpResponse::Forbidden().body("you are not this user"))
+            }
+            // es_user_idが変わっててそれがNoneじゃないならレビューをとってくる
+            if pu.es_user_id != form.user.es_user_id && form.user.es_user_id != None {
+                let insert_reviews = scraping::reviews::get_reviews_by_es_user_id(form.user.es_user_id.clone().unwrap())
+                    .await
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                    })?;
+
+                updated_user.password = pu.password;
+
+                let conn = pools.db.get().map_err(|_| {
+                    eprintln!("couldn't get db connection from pools");
+                    HttpResponse::InternalServerError().finish()
+                })?;
+
+                let _reviews = web::block(move || reviews::insert_new_reviews(insert_reviews, &conn))
+                    .await
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        HttpResponse::InternalServerError().finish()
+                })?;
             }
         } else {
             return Ok(HttpResponse::NotFound().body("this user not found"))
         }
-
         let conn = pools.db.get().map_err(|_| {
             eprintln!("couldn't get db connection from pools");
             HttpResponse::InternalServerError().finish()

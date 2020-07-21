@@ -70,6 +70,9 @@ pub fn mask_recent_timelines(
         let mut res_user: models::User = models::User::new();
         match masked_users_map.get(&res_tl.user_id) {
             Some(masked_user) => {
+                if masked_user.show_all_users == Some(false) {
+                    continue
+                }
                 res_tl.user_id = masked_user.id.clone();
                 res_user = masked_user.clone();
             },
@@ -77,6 +80,9 @@ pub fn mask_recent_timelines(
                 let mut is_error = true;
                 for flee in &followee_users {
                     if flee.id == res_tl.user_id {
+                        if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {
+                            continue
+                        }
                         res_user = flee.clone();
                         is_error = false;
                         break
@@ -85,6 +91,7 @@ pub fn mask_recent_timelines(
                 if is_error {
                     anyhow::bail!("something went wrong")
                 }
+                res_user.password = String::from("");
             }
         }
         res_timelines.push(
@@ -116,7 +123,7 @@ pub fn mask_timeline(
         anyhow::bail!("timeline not found")
     }
 
-    let user: models::User;
+    let mut user: models::User;
     let mut is_follow: bool = false;
     let mut rid_id = String::from("");
     if res_tl.user_id.clone() != String::from("") {
@@ -147,21 +154,32 @@ pub fn mask_timeline(
             anyhow::bail!("this is unfollow user list activity")
         }
 
-        match is_follow {
-            true => {
-                if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
+        if let Some(getted_user) = actions::users::find_user_by_uid(res_tl.user_id.clone(), conn)? {
+            match is_follow {
+                true => {
+                    if getted_user.show_followers == Some(false) || (res_game.okazu == Some(true) && getted_user.show_followers_okazu == Some(false)) {
+                        anyhow::bail!("this user not show activity")
+                    }
                     user = getted_user;
-                } else {
+                    user.password = String::from("");
+                },
+                false => {
+                    if getted_user.show_all_users == Some(false) {
+                        anyhow::bail!("this user not show activity")
+                    }
                     user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
+                    res_tl.user_id = random_id.id.clone();
                 }
-            },
-            false => {
-                user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
-                res_tl.user_id = random_id.id.clone();
             }
+        } else {
+            user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
         }
     } else {
-        user = models::User::annonymus(res_tl.user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
+        if res_tl.log_type == models::LogType::Review as i32 {
+            user = models::User::annonymus(res_tl.user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
+        } else {
+            user = models::User::annonymus(res_tl.user_id.clone(), String::from(""), String::from("名無しさん"));
+        }
     }
 
     // reviewかListを挿入

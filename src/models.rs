@@ -27,8 +27,10 @@ pub struct Post {
 #[table_name = "users"]
 pub struct User {
     pub id: String,
-    pub es_user_id: String,
+    pub es_user_id: Option<String>,
+    pub name: String,
     pub display_name: String,
+    pub password: String,
     pub comment: Option<String>,
     pub show_all_users: Option<bool>,
     pub show_detail_all_users: Option<bool>,
@@ -42,8 +44,10 @@ impl User {
     pub fn new() -> User {
         User {
             id: Uuid::new_v4().to_string(),
-            es_user_id: String::from(""),
+            es_user_id: Some(String::from("")),
+            name: String::from(""),
             display_name: String::from(""),
+            password: String::from(""),
             comment: None,
             show_all_users: Some(true),
             show_detail_all_users: Some(false),
@@ -56,8 +60,10 @@ impl User {
     pub fn annonymus(randomid: String, es_user_id: String, display_name: String) -> User {
         User {
             id: randomid,
-            es_user_id: es_user_id,
+            es_user_id: Some(es_user_id),
+            name: display_name.clone(),
             display_name: display_name,
+            password: String::from(""),
             comment: None,
             show_all_users: Some(true),
             show_detail_all_users: Some(false),
@@ -71,7 +77,9 @@ impl User {
         User {
             id: randomid,
             es_user_id: user.es_user_id,
+            name: user.name,
             display_name: user.display_name,
+            password: String::from(""),
             comment: user.comment,
             show_all_users: user.show_all_users,
             show_detail_all_users: user.show_detail_all_users,

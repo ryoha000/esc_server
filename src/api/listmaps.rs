@@ -213,27 +213,3 @@ pub async fn delete_game_list(
         }
     }
 }
-
-pub async fn get_listmaps(
-    auth: middleware::Authorized,
-    pools: web::Data<super::super::Pools>,
-) -> Result<HttpResponse, Error> {
-    let conn = pools.db.get().map_err(|_| {
-        eprintln!("couldn't get db connection from pools");
-        HttpResponse::InternalServerError().finish()
-    })?;
-
-    let mut redis_conn = pools.redis.get().map_err(|_| {
-        eprintln!("couldn't get redis connection from pools");
-        HttpResponse::InternalServerError().finish()
-    })?;
-
-    let listmaps = web::block(move || listmaps::find_listmaps(&conn))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
-
-    Ok(HttpResponse::Ok().json(listmaps))
-}
