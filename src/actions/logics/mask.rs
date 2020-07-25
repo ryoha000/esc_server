@@ -75,6 +75,11 @@ pub fn mask_recent_timelines(
                 }
                 res_tl.user_id = masked_user.id.clone();
                 res_user = masked_user.clone();
+                if masked_user.display_name == String::from("批評空間のユーザー") {
+                    if res_tl.log_type != models::LogType::Review as i32 {
+                        res_user = models::User::annonymus(res_tl.user_id.clone(), String::from(""), String::from("名無しさん"));
+                    }
+                }
             },
             _ => {
                 let mut is_error = true;
@@ -172,7 +177,11 @@ pub fn mask_timeline(
                 }
             }
         } else {
-            user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
+            if res_tl.log_type == models::LogType::Review as i32 {
+                user = models::User::annonymus(res_tl.user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
+            } else {
+                user = models::User::annonymus(res_tl.user_id.clone(), String::from(""), String::from("名無しさん"));
+            }
         }
     } else {
         if res_tl.log_type == models::LogType::Review as i32 {
