@@ -59,14 +59,27 @@ pub async fn me(
                 eprintln!("{}", e);
                 HttpResponse::InternalServerError().finish()
             })?;
-    
+
         if let Some(user) = user {
-            return Ok(HttpResponse::Ok().json(user))
-        } else {
-            let res = HttpResponse::NotFound()
-                .body("No user found");
-            return Ok(res)
+            // useridをダイレクト用に差し替え
+            let user_id = user.id.clone();
+            let mut res_user = user;
+            let conn = pools.db.get().map_err(|_| {
+                eprintln!("couldn't get db connection from pools");
+                HttpResponse::InternalServerError().finish()
+            })?;
+            let rand = web::block(move || randomids::get_randomid_by_user_id(user_id, models::RandomPurpose::FDirect as i32, &conn))
+                .await
+                .map_err(|e| {
+                    eprintln!("{}", e);
+                    HttpResponse::InternalServerError().finish()
+                })?;
+            res_user.id = rand.id;
+            return Ok(HttpResponse::Ok().json(res_user))
         }
+        let res = HttpResponse::NotFound()
+            .body("No user found");
+        return Ok(res)
     } else {
         return Ok(HttpResponse::Unauthorized().body("Please login"))
     }
