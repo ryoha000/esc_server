@@ -17,6 +17,7 @@ pub fn mask_recent_timelines(
     let mut followee_user_ids: Vec<String> = Vec::new();
     // 自分がフォローしてるユーザーの配列
     let mut followee_users: Vec<models::User> = Vec::new();
+    let mut requested_user_id = String::new();
     match me {
         Some(_me) => {
             let me_id = _me.user_id.clone();
@@ -33,6 +34,7 @@ pub fn mask_recent_timelines(
             if let Some(user) = actions::users::find_user_by_uid(_me.user_id, conn)? {
                 // 自分もいれる
                 followee_users.push(user);
+                requested_user_id = me_id.clone();
                 followee_user_ids.push(me_id);
             }
         }
@@ -86,8 +88,11 @@ pub fn mask_recent_timelines(
                 for flee in &followee_users {
                     if flee.id == res_tl.user_id {
                         if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {
-                            // 下のis_errorで飛ばす
-                            break
+                            // 自分からは見えるように
+                            if requested_user_id != res_tl.user_id {
+                                // 下のis_errorで飛ばす
+                                break
+                            }
                         }
                         res_user = flee.clone();
                         is_error = false;
