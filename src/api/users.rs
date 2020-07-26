@@ -308,7 +308,7 @@ pub async fn login(
     let name_clone = form.name.clone();
 
     let user_uid: String;
-    let res_user: models::User;
+    let mut res_user: models::User;
     match web::block(move || users::find_user_by_name(name_clone, &conn))
         .await
         .map_err(|e| {
@@ -351,6 +351,20 @@ pub async fn login(
             res_user = user;
         }
     }
+    let user_id = res_user.id.clone();
+    // useridをダイレクト用に差し替え
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+    let rand = web::block(move || randomids::get_randomid_by_user_id(user_id, models::RandomPurpose::FDirect as i32, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })?;
+    res_user.id = rand.id;
+
     let mut prev_session = String::from("");
     // sessionがあったら破棄
     let _prev_session: Option<String> = r2d2_redis::redis::cmd("GET").arg(&format!("session_user_id:{}", user_uid)).query(redis_conn.deref_mut()).map_err(|e| {
@@ -373,6 +387,29 @@ pub async fn login(
         })?;
 
     return Ok(HttpResponse::Ok().header("set-cookie", format!("session_id={}", session_id)).json(res_user))
+}
+
+pub async fn logout(
+    pools: web::Data<super::super::Pools>,
+    auth: middleware::Authorized,
+) -> Result<HttpResponse, Error> {
+    let mut redis_conn = pools.redis.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
+    if let Some(me) = middleware::check_user(auth, &mut redis_conn) {
+        r2d2_redis::redis::pipe()
+            .cmd("DEL").arg(&format!("session_user:{}", me.session_id))
+            .cmd("DEL").arg(&format!("session_user_id:{}", me.user_id))
+            .query(redis_conn.deref_mut()).map_err(|e| {
+                eprintln!("{}", e);
+                HttpResponse::InternalServerError().finish()
+            })?;
+        return Ok(HttpResponse::Ok().body("logout success"))
+    } else {
+        return Ok(HttpResponse::Unauthorized().body("you are not login"))
+    }
 }
 
 pub async fn edit_user(
