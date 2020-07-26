@@ -19,10 +19,9 @@ pub fn mask_recent_timelines(
     let mut followee_users: Vec<models::User> = Vec::new();
     match me {
         Some(_me) => {
-            let my_uuid: uuid::Uuid = _me.user_id.parse().context("please enter uuid")?;
-            // 自分の行動もマスクする必要ない
-            followee_user_ids.push(_me.user_id.clone());
-
+            let me_id = _me.user_id.clone();
+            let my_uuid: uuid::Uuid = _me.user_id.clone().parse().context("please enter uuid")?;
+            
             if let Some(followees) = actions::follows::find_followees_by_uid(my_uuid, conn)? {
                 // 自分がフォローしてるユーザーを入れていく
                 for flee in &followees {
@@ -30,10 +29,11 @@ pub fn mask_recent_timelines(
                 }
                 followee_users = followees;
             }
-
+            
             if let Some(user) = actions::users::find_user_by_uid(_me.user_id, conn)? {
                 // 自分もいれる
                 followee_users.push(user);
+                followee_user_ids.push(me_id);
             }
         }
         _ => {}
@@ -86,7 +86,8 @@ pub fn mask_recent_timelines(
                 for flee in &followee_users {
                     if flee.id == res_tl.user_id {
                         if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {
-                            continue
+                            // 下のis_errorで飛ばす
+                            break
                         }
                         res_user = flee.clone();
                         is_error = false;
@@ -94,7 +95,7 @@ pub fn mask_recent_timelines(
                     }
                 }
                 if is_error {
-                    anyhow::bail!("something went wrong")
+                    continue
                 }
                 res_user.password = String::from("");
             }
