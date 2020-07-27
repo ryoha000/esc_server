@@ -174,6 +174,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/users/{user_id}/messages", web::post().to(api::messages::post_messages))
                 .route("/users/{user_id}/lists", web::get().to(api::lists::get_lists_by_user_id))
                 .route("/login", web::post().to(api::users::login))
+                .route("/logout", web::post().to(api::users::logout))
 
                 .route("/brands", web::get().to(api::brands::get_brands))
                 .route("/brands/{brand_id}", web::get().to(api::brands::get_brand))

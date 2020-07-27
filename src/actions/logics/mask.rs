@@ -50,11 +50,11 @@ pub fn mask_recent_timelines(
         tl_with_game_vec = _tl_with_game_vec;
         for (tl, _) in &tl_with_game_vec {
             if tl.user_id == not_login_user_id {
-                break
+                continue
             }
             for uid in &followee_user_ids {
                 if uid == &tl.user_id {
-                    break
+                    continue
                 }
             }
             necessary_mask_user_ids.push(tl.user_id.clone());
@@ -89,23 +89,27 @@ pub fn mask_recent_timelines(
                 if res_tl.user_id == not_login_user_id {
                     if res_tl.log_type == models::LogType::Review as i32 {
                         res_user = models::User::annonymus(not_login_user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
+                        is_error = false;
                     }
                     if res_tl.log_type == models::LogType::Play as i32 {
                         res_user = models::User::annonymus(not_login_user_id.clone(), String::from(""), String::from("名無しさん"));
+                        is_error = false;
                     }
                 }
-                for flee in &followee_users {
-                    if flee.id == res_tl.user_id {
-                        if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {
-                            // 自分からは見えるように
-                            if requested_user_id != res_tl.user_id {
-                                // 下のis_errorで飛ばす
-                                break
+                if is_error {
+                    for flee in &followee_users {
+                        if flee.id == res_tl.user_id {
+                            if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {
+                                // 自分からは見えるように
+                                if requested_user_id != res_tl.user_id {
+                                    // 下のis_errorで飛ばす
+                                    break
+                                }
                             }
+                            res_user = flee.clone();
+                            is_error = false;
+                            break
                         }
-                        res_user = flee.clone();
-                        is_error = false;
-                        break
                     }
                 }
                 if is_error {
