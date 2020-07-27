@@ -45,18 +45,19 @@ pub fn mask_recent_timelines(
     let tl_with_game_vec: Vec<(models::Timeline, models::Game)>;
     // maskする必要があるuseridの配列
     let mut necessary_mask_user_ids: Vec<String> = Vec::new();
+    let not_login_user_id = String::from("");
     if let Some(_tl_with_game_vec) = actions::timelines::find_timelines_with_game_of_limit20_by_unnecessary_mask_user_ids(offset, conn)? {
         tl_with_game_vec = _tl_with_game_vec;
         for (tl, _) in &tl_with_game_vec {
-            let mut is_follow = false;
+            if tl.user_id == not_login_user_id {
+                break
+            }
             for uid in &followee_user_ids {
                 if uid == &tl.user_id {
-                    is_follow = true;
+                    break
                 }
             }
-            if !is_follow {
-                necessary_mask_user_ids.push(tl.user_id.clone());
-            }
+            necessary_mask_user_ids.push(tl.user_id.clone());
         }
     } else {
         anyhow::bail!("timeline not found")
@@ -85,6 +86,14 @@ pub fn mask_recent_timelines(
             },
             _ => {
                 let mut is_error = true;
+                if res_tl.user_id == not_login_user_id {
+                    if res_tl.log_type == models::LogType::Review as i32 {
+                        res_user = models::User::annonymus(not_login_user_id.clone(), String::from("批評空間のユーザー"), String::from("批評空間のユーザー"));
+                    }
+                    if res_tl.log_type == models::LogType::Play as i32 {
+                        res_user = models::User::annonymus(not_login_user_id.clone(), String::from(""), String::from("名無しさん"));
+                    }
+                }
                 for flee in &followee_users {
                     if flee.id == res_tl.user_id {
                         if flee.show_followers == Some(false) || (gm.okazu == Some(true) && flee.show_followers_okazu == Some(false)) {

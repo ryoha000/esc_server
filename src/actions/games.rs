@@ -34,14 +34,16 @@ pub fn find_games_limited(
 
 pub fn find_games_recent(
     conn: &PgConnection,
-) -> Result<Option<Vec<models::Game>>, diesel::result::Error> {
+) -> Result<Option<Vec<(models::Game, models::Brand)>>, diesel::result::Error> {
     use crate::schema::games::dsl::*;
+    use crate::schema::brands::dsl::*;
 
     let t = chrono::Local::today();
     let get_games = games
+        .inner_join(brands)
         .filter(sellday.gt(chrono::NaiveDate::from_ymd(t.year(), t.month(), t.day())))
         .filter(sellday.ne(chrono::NaiveDate::from_ymd(2030, 1, 1)))
-        .load::<models::Game>(conn)
+        .load::<(models::Game, models::Brand)>(conn)
         .optional()?;
 
     Ok(get_games)
