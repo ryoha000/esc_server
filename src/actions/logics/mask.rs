@@ -191,8 +191,15 @@ pub fn mask_timeline(
                     if getted_user.show_all_users == Some(false) {
                         anyhow::bail!("this user not show activity")
                     }
-                    user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
-                    res_tl.user_id = random_id.id.clone();
+                    match getted_user.show_detail_all_users {
+                        Some(true) => {
+                            user = getted_user;
+                        },
+                        _ => {
+                            user = models::User::annonymus(random_id.id.clone(), String::from(""), String::from("名無しさん"));
+                            res_tl.user_id = random_id.id.clone();
+                        }
+                    }
                 }
             }
         } else {
@@ -299,6 +306,10 @@ pub fn mask_annynomus_users_by_ids(
 
     let mut user_maps = HashMap::new();
     for (rid, u) in get_random_ids {
+        if u.show_detail_all_users == Some(true) {
+            user_maps.insert(rid.user_id, u);
+            continue
+        }
         let masked_es_id: String;
         let masked_display_name: String;
         match &*u.display_name {

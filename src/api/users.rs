@@ -422,6 +422,26 @@ pub async fn edit_user(
         HttpResponse::InternalServerError().finish()
     })?;
 
+    let search_randomid: models::Randomid;
+    let u_id = form.user.id.parse::<uuid::Uuid>().map_err(|_| {
+        eprintln!("user id require uuid");
+        HttpResponse::InternalServerError().finish()
+    })?;
+    match web::block(move || randomids::find_randomid_by_uid(u_id, &conn))
+        .await
+        .map_err(|e| {
+            eprintln!("{}", e);
+            HttpResponse::InternalServerError().finish()
+        })? {
+        Some(rid) => search_randomid = rid,
+        _ => return Ok(HttpResponse::NotFound().body("user not found"))
+    }
+
+    let conn = pools.db.get().map_err(|_| {
+        eprintln!("couldn't get db connection from pools");
+        HttpResponse::InternalServerError().finish()
+    })?;
+
     let mut redis_conn = pools.redis.get().map_err(|_| {
         eprintln!("couldn't get db connection from pools");
         HttpResponse::InternalServerError().finish()
@@ -439,7 +459,7 @@ pub async fn edit_user(
         let mut updated_user = form.user.clone();
         if let Some(pu) = prev_user {
             // 違うユーザーのを編集しようとしてるなら弾く
-            if uid != form.user.id {
+            if uid != search_randomid.user_id {
                 return Ok(HttpResponse::Forbidden().body("you are not this user"))
             }
             // es_user_idが変わっててそれがNoneじゃないならレビューをとってくる

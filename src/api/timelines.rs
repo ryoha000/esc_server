@@ -60,11 +60,12 @@ pub async fn get_timeline(
     })?;
 
     let me = middleware::check_user(auth, &mut redis_conn);
-    let get_timeline = web::block(move || mask::mask_timeline(me, timeline_id.into_inner(), &conn))
-        .await
-        .map_err(|e| {
-            eprintln!("{}", e);
-            HttpResponse::InternalServerError().finish()
-        })?;
-    Ok(HttpResponse::Ok().json(get_timeline))
+    match web::block(move || mask::mask_timeline(me, timeline_id.into_inner(), &conn)).await {
+        Ok(get_timeline) => {
+            Ok(HttpResponse::Ok().json(get_timeline))
+        },
+        _ => {
+            Ok(HttpResponse::Forbidden().body("timeline is not found"))
+        }
+    }
 }
