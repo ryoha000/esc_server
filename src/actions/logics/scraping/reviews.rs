@@ -2,7 +2,7 @@ use scraper::{Selector};
 use super::super::super::super::models;
 extern crate reqwest;
 use super::scraping_shared::*;
-use anyhow::{Result};
+use anyhow::{Result, Context};
 
 const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
 
@@ -26,10 +26,11 @@ pub async fn get_all_reviews() -> Result<Vec<models::Review>> {
     Ok(_reviews)
 }
 
-pub async fn get_recent_reviews() -> Result<Vec<models::Review>> {
+pub async fn get_recent_reviews(data: String) -> Result<Vec<models::Review>> {
     let mut _reviews: Vec<models::Review> = Vec::new();
-    let query = format!("WHERE CURRENT_TIMESTAMP - interval '5 minute' < modified");
-    let fragment = execute_on_es(make_query(query)).await.unwrap();
+    // let query = format!("WHERE CURRENT_TIMESTAMP - interval '5 minute' < modified");
+    // let fragment = execute_on_es(make_query(query)).await.unwrap();
+    let fragment = parse_text(data).await.with_context(|| "parsing error: html data from string")?;
     let tr_selector = Selector::parse("tr").unwrap();
     for tr in fragment.select(&tr_selector) {
         let mut _review = models::Review::get_review_from_row(tr);

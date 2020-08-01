@@ -5,6 +5,7 @@ use super::super::actions::users;
 use super::super::actions::timelines;
 use super::super::actions::reviewlogs;
 use super::super::models;
+use serde::{Deserialize, Serialize};
 
 pub async fn get_review(
     pools: web::Data<super::super::Pools>,
@@ -106,13 +107,20 @@ pub async fn add_all_review(
     Ok(HttpResponse::Ok().json(review))
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateStruct {
+    pub password: String,
+    pub data: String,
+}
+
 pub async fn add_recent_reviews(
     pools: web::Data<super::super::Pools>,
     srv: web::Data<Addr<super::super::ws_actor::WsActor>>,
+    form: web::Json<UpdateStruct>,
 ) -> Result<HttpResponse, Error> {
     let ws_a = srv.get_ref().clone();
 
-    let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews()
+    let new_reviews = super::super::actions::logics::scraping::reviews::get_recent_reviews(form.data.clone())
         .await
         .map_err(|e| {
             eprintln!("{}", e);

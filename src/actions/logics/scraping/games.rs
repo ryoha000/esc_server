@@ -6,8 +6,9 @@ use anyhow::{Context, Result};
 
 const INVALID_GAME_ID: [i32; 10] = [23707, 4370, 16061, 4371, 4372, 4373, 29250, 15353, 26836, 9381];
 
-pub async fn get_all_games() -> Result<Vec<models::Game>> {
-    let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
+pub async fn get_all_games(data: String) -> Result<Vec<models::Game>> {
+    let fragment = parse_text(data).await.with_context(|| "parsing error: html data from string")?;
+    // let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     let mut _games: Vec<models::Game> = Vec::new();
     for tr in fragment.select(&tr_selector) {

@@ -136,13 +136,14 @@ pub async fn add_id_brand(
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Password {
+pub struct UpdateStruct {
     pub password: String,
+    pub data: String,
 }
 
 pub async fn update_all_brands(
     pools: web::Data<super::super::Pools>,
-    form: web::Json<Password>,
+    form: web::Json<UpdateStruct>,
 ) -> Result<HttpResponse, Error> {
     let pass = super::super::root_pass();
     if pass != form.password {
@@ -165,7 +166,7 @@ pub async fn update_all_brands(
     })?;
 
     // 今ある全てのブランドを取得
-    let new_brands = actions::logics::scraping::brands::get_all_brands()
+    let new_brands = actions::logics::scraping::brands::get_all_brands(form.data.clone())
         .await
         .map_err(|e| {
             eprintln!("{}", e);

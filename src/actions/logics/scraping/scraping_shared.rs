@@ -63,6 +63,10 @@ pub async fn execute_on_es(query: String) -> Result<scraper::html::Html> {
     Ok(Html::parse_fragment(&text))
 }
 
+pub async fn parse_text(data: String) -> Result<scraper::html::Html> {
+    Ok(Html::parse_fragment(&data))
+}
+
 pub fn option_bool_from_tf(b: String) -> Option<bool> {
     match &*b {
         "t" => Some(true),

@@ -4,8 +4,9 @@ extern crate reqwest;
 use super::scraping_shared::*;
 use anyhow::{Context, Result};
 
-pub async fn get_all_brands() -> Result<Vec<models::Brand>> {
-    let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
+pub async fn get_all_brands(data: String) -> Result<Vec<models::Brand>> {
+    let fragment = parse_text(data).await.with_context(|| "parsing error: html data from string")?;
+    // let fragment = execute_on_es(make_query(format!(""))).await.unwrap();
     let tr_selector = Selector::parse("tr").unwrap();
     let mut _brands: Vec<models::Brand> = Vec::new();
     for tr in fragment.select(&tr_selector) {
