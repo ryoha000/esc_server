@@ -148,7 +148,7 @@ async fn main() -> std::io::Result<()> {
         redis: redis_pool,
     };
     
-    // esc_server::db_setup(&pools).await;
+    esc_server::db_setup(&pools).await;
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
     println!("Hello, world!");
@@ -165,7 +165,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/me/follows", web::get().to(api::follows::get_my_follow_request))
 
                 .route("/users/{user_id}", web::get().to(api::users::get_user_detail))
-                .route("/users", web::get().to(api::users::get_users))
+                // .route("/users", web::get().to(api::users::get_users))
                 .route("/users", web::post().to(api::users::login))
                 .route("/users", web::put().to(api::users::edit_user))
                 .route("/users/{user_id}/followers", web::get().to(api::follows::get_followers))
@@ -181,14 +181,14 @@ async fn main() -> std::io::Result<()> {
                 // for test
                 .route("/brands", web::patch().to(api::brands::update_all_brands))
                 // for test
-                .route("brands/{brand_id}", web::post().to(api::brands::add_id_brand))
+                // .route("brands/{brand_id}", web::post().to(api::brands::add_id_brand))
 
                 .route("/games", web::get().to(api::games::get_minimal_games))
                 .route("/games", web::post().to(api::games::get_games))
                 .route("/games", web::patch().to(api::games::update_all_games))
                 .route("/games/{game_id}", web::get().to(api::games::get_game))
                 // for test
-                .route("games/{game_id}", web::post().to(api::games::add_id_game))
+                // .route("games/{game_id}", web::post().to(api::games::add_id_game))
                 
                 .route("/timelines/{timeline_id}", web::get().to(api::timelines::get_timeline))
                 .route("/timelines", web::get().to(api::timelines::get_timelines))
@@ -215,12 +215,11 @@ async fn main() -> std::io::Result<()> {
                 .route("/campaigns", web::post().to(api::campaigns::set_campaigns))
 
                 .route("/recentgames", web::get().to(api::games::get_recent_games))
-                .route("/recentgames", web::post().to(api::games::add_game))
 
                 .service(web::resource("/ws/").to(ws_route))
         )
     })
-    .bind("127.0.0.1:8088")?
+    .bind("0.0.0.0:8088")?
     .run()
     .await
 }
