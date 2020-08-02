@@ -198,14 +198,13 @@ pub async fn get_recent_games(
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateStruct {
+pub struct Password {
     pub password: String,
-    pub data: String,
 }
 
 pub async fn update_all_games(
     pools: web::Data<super::super::Pools>,
-    form: web::Json<UpdateStruct>,
+    form: web::Json<Password>,
 ) -> Result<HttpResponse, Error> {
     let pass = super::super::root_pass();
     if pass != form.password {
@@ -228,7 +227,7 @@ pub async fn update_all_games(
     })?;
     
     // 今ある全てのゲームを取得
-    let new_games = actions::logics::scraping::games::get_all_games(form.data.clone())
+    let new_games = actions::logics::scraping::games::get_all_games()
     .await
     .map_err(|e| {
         eprintln!("{}", e);
