@@ -148,7 +148,7 @@ async fn main() -> std::io::Result<()> {
         redis: redis_pool,
     };
     
-    esc_server::db_setup(&pools).await;
+    // esc_server::db_setup(&pools).await;
     env_logger::from_env(Env::default().default_filter_or("info")).init();
 
     println!("Hello, world!");
